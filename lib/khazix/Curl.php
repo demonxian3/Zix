@@ -17,7 +17,8 @@ namespace Khazix;
 class Curl
 {
 
-    public function __construct($timeout = 5, $certs=[]){
+    public function __construct($timeout = 5, $certs=[])
+    {
         $this->timeout = $timeout;
         $this->options = [];
         $this->headers = [];
@@ -31,7 +32,8 @@ class Curl
         $this->ssl = false;
     }
 
-    public function __call($method, $arguments){
+    public function __call($method, $arguments)
+    {
     
         $this->headers = [];
         $this->options = [];
@@ -78,26 +80,30 @@ class Curl
         $this->exec();
     }
 
-    public function xml($data){
+    public function xml($data)
+    {
         $this->headers[] = 'Content-Type:text/xml; charset=utf-8';
 
         $data = Utils::arrayToXml($data);
         return $data;
     }
 
-    public function json($data){
+    public function json($data)
+    {
         $this->headers[] = 'Content-Type:application/json; charset=utf-8';
         $data = json_encode($data, JSON_UNESCAPED_UNICODE);
         return $data;
     }
 
-    public function form($data){
+    public function form($data)
+    {
         $this->headers[] = 'Content-Type:application/x-www-form-urlencoded; charset=utf-8';
         $data = http_build_query($data);
         return $data;
     }
 
-    public function file($data){
+    public function file($data)
+    {
         $this->headers[] = 'Content-Type:multipart/form-data; charset=utf-8';
 
         $newData = [];
@@ -111,13 +117,15 @@ class Curl
         return $newData;
     }
 
-    public function field($data){
+    public function field($data)
+    {
         $data = (is_array($data)) ? http_build_query($data) : $data;
         $this->headers[] = "Content-Length: ". strlen($data);
         return $data;
     }
 
-    public function exec() {
+    public function exec() 
+    {
         $con = curl_init();
         curl_setopt_array($con, $this->options);
         $res = curl_exec($con);
@@ -133,17 +141,20 @@ class Curl
         curl_close($con);
     }
 
-    public function setCert($ca, $cert, $key) {
+    public function setCert($ca, $cert, $key) 
+    {
         $this->certs['ca'] = $ca;
         $this->certs['key'] = $key;
         $this->certs['cert'] = $cert;
     }
 
-    public function setOption(array $options){
+    public function setOption(array $options)
+    {
         $this->customOpts = $options;
     }
 
-    public function setHeader(array $headers){
+    public function setHeader(array $headers)
+    {
         $this->customHdrs = $headers;
     }
 

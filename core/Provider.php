@@ -1,203 +1,117 @@
 <?php
 namespace Core;
 
-use Common\Config;
 use Pimple\Container;
 use Pimple\ServiceProviderInterface;
 
 class Provider implements ServiceProviderInterface
 {
-    protected static $classMap = [
-        'curl'              => '\\Khazix\\Curl',
-        'mysql'             => '\\Catfan\\Medoo',
-        'redis'             => '\\Redis',
-        'wxaccount'         => '\\Khazix\\Wxaccount',
-        'logger'            => '\\Monolog\\Logger',
-        'logger_handler'    => '\\Monolog\\Handler\\FileHandler',
-        'logger_formatter'  => '\\Monolog\\Formatter\\LineFormatter',
-    ];
+    private $_di;
+
+    private $configLoader;
+
+    public function __construct(ConfigLoader $configLoader)
+    {
+        $this->services = $configLoader->get('service');
+
+        $this->configLoader = $configLoader;
+    }
     
     public function register(Container $di)
     {
         $this->_di = $di;
-        $this->_di['di_class_map'] = static::$classMap;
 
-        $this->init('curl');
-        $this->init('mysql');
-        $this->init('redis');
-        $this->init('wxaccount');
-        $this->init('logger');
+        $this->registerConfigLoader();
+
+        $this->registerParamsProcessor();
+
+        $this->registerAllServices();
     }
 
-    public function init($server)
+    //注册配置加载器
+    public function registerConfigLoader() 
     {
-        $this->$server();
+        $loader = $this->configLoader;
+
+        $this->_di['config'] = function($di) use($loader) {
+            return $loader;
+        };
     }
 
-    public function registerDynamicServer($name, $dynamic_params)
+    //注册参数解析函数，@开头的参数会读取配置文件
+    public function registerParamsProcessor()
     {
-        $class = static::$classMap[$name];
+        $this->_di['__function_parse_params'] = $this->_di->protect(
+            function ($name, $params) {
+                $config = $this->_di['config']->get($name);
 
+                $result = [];
+                foreach ($params as $param) {
 
-        $keys = array();
-        foreach ($dynamic_params as $key => $value) {
-            $this->_di[$key] = $value;
-            array_push($keys, $key);
-        }
+                    if (is_string($param) && $param[0] === '@') {
+                        $key = substr($param, 1);
+                        $param = $config[$key] ?? $param;
 
-        $this->_di[$name] = $this->_di->factory(function ($di) use($class, $keys) {
-
-            $dynamic_params = [];
-            foreach ($keys as $key){
-                if ($this->_di[$key]){
-                    array_push($dynamic_params, $this->_di[$key]);
+                    } else if(is_array($param)) {
+                        foreach($param as $k => $v) {
+                            if (is_string($v) && $v[0] === '@') {
+                                $try = substr($v, 1);
+                                $param[$k] = $config[$try] ?? $v;
+                            }
+                        }
+                    }
+                    array_push($result, $param);
                 }
+
+                return $result;
+            }
+        );
+    }
+
+    //按顺序注册所有配置表列出的服务, params也要按顺序
+    public function registerAllServices()
+    {
+        foreach ($this->services as $name => $option) {
+
+            $params = [];
+
+            $class = $option['class'];
+
+            if ($option['dynamic'] === false) {
+
+                $params = $this->_di['__function_parse_params']($name, $option['params']);
+
+                $this->registerStatic($name, $class, $params);
+            } else {
+                $this->registerDynamic($name, $class, $option['params']);
             }
 
-            return new $class(...$dynamic_params);
-        });
+
+            if (isset($option['extend']) && is_callable($option['extend'])) {
+                $this->_di->extend($name, $option['extend']);
+            }
+        }
+
     }
 
-    public function registerStaticServer($name, $params)
+    public function registerStatic($name, $class, $params)
     {
-        $class = static::$classMap[$name];
-
         $this->_di[$name] = function($di) use ($class, $params){
             return new $class(...$params);
         };
     }
 
-    public function extendServer($name, $call)
+    public function registerDynamic($name, $class, $params)
     {
-        $this->_di->extend($name, $call);
+        $this->_di[$name] = $this->_di->factory(
+            
+            function ($di) use($name, $class, $params) {
+
+                $dynamic = $di['__function_parse_params']($name, $params);
+
+                return new $class(...$dynamic);
+            }
+        );
     }
-
-
-    public function curl()
-    {
-        $config = Config::curl;
-
-        $params = [
-            $config['timeout'], 
-            $config['certs']
-        ];
-
-        $this->registerStaticServer('curl', $params);
-    }
-
-
-    public function mysql()
-    {
-        $config = Config::mysql;
-
-        $params = [[
-            'database_type' => 'mysql',
-            'server'        => 'localhost',
-            'database_name' => $config['database'],
-            'username'      => $config['username'],
-            'password'      => $config['password'],
-        ]];
-
-        $this->registerStaticServer('mysql', $params);
-    }
-
-    public function redis()
-    {
-        $config = Config::redis;
-
-        $params = [];
-
-        $this->registerStaticServer('redis', $params);
-
-        $this->extendServer('redis', function ($obj, $di) use($config) {
-            $obj->connect($config['host'], $config['port']);
-            return $obj;
-        });
-
-    }
-
-    public function wxaccount()
-    {
-        $config = Config::wxaccount;
-    
-        $params = [
-            $config['token'],
-            $config['appid'],
-            $config['appsecret'],
-        ];
-
-        $this->registerStaticServer('wxaccount', $params);
-
-        $this->extendServer('wxaccount', function ($obj, $di) {
-            $obj->setDI($di);
-            return $obj;
-        });
-    }
-
-    public function loggerHandler()
-    {
-        $params = [
-            'logger_filepath' => Config::logger['filepath'],
-            'logger_level' => Config::logger['level'],
-        ];
-
-        $this->registerDynamicServer('logger_handler', $params);
-
-        $this->init('loggerFormatter');
-
-        $this->extendServer('logger_handler', function ($obj, $di) {
-            $obj->setFormatter($di['logger_formatter']);
-            return $obj;
-        });
-    }
-
-    public function loggerFormatter()
-    {
-        $params = [
-            'logger_format' => Config::logger['format'],
-            'logger_date_format' => Config::logger['dateFormat'],
-        ];
-
-        $this->registerDynamicServer('logger_formatter', $params);
-    }
-
-
-    public function logger()
-    {
-        $params = [
-            'logger_channel' => Config::logger['channel'],
-        ];
-
-        $this->registerDynamicServer('logger', $params);
-
-        $this->init('loggerHandler');
-
-        $this->extendServer('logger', function ($obj, $di) {
-            $obj->pushHandler($di['logger_handler']);
-            return $obj;
-        });
-
-    }
-
-    
-//use Monolog\Logger;
-//use Monolog\Handler\FileHandler;
-//use Monolog\Formatter\LineFormatter;
-
-//$handler = new FileHandler($logpath);
-//
-//$dateFormat = 'Y-m-d H:i:s';
-//$output = "[%datetime%] %channel%.%level_name%  :%message%\n%context%\n\n";
-////$formatter = new LineFormatter($output, $dateFormat);
-////$stream->setFormatter($formatter);
-//echo '<pre>';
-//$logger = new Logger('public test');
-//$logger->pushHandler($handler);
-//
-//
-//$data = ['fucking u'];
-//
-//$logger->info('Adding a new user', $data);
-
 
 }

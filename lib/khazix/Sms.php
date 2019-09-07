@@ -1,20 +1,30 @@
 <?php
 namespace Khazix;
 
-use common\Config;
-
 class Sms
 {
-    public function __construct()
+    private $appid;
+
+    private $appkey;
+
+    private $tplid;
+
+    public function __construct($appid, $appkey, $tplid)
     {
-        $this->appid  = Config::sms_appid;
-        $this->tplid  = Config::sms_tplid;
-        $this->appkey = Config::sms_appsecret;
+        $this->appid  = $appid;
+        $this->appkey = $appkey;
+        $this->tplid  = $tplid;
+    }
+
+    public function setContainer($di)
+    {
+        $this->_di = $di;
+        $this->curl = $this->_di['curl'];
     }
 
     //根据模板1发送短信
     //{1}验证码是{2}，请在{3}分钟内填写。请勿将短信验证码提供给他人绑定
-    public function sendSMS_tpl1($phone, $code)
+    public function send($phone, $code)
     {
         $timestamp = time();
         //$code = rand(101010, 989898);
@@ -35,10 +45,10 @@ class Sms
             'tpl_id' => $this->tplid,
         ];
 
-        $res = Http::postJson($url, $data);
-        if ($res['errmsg'] === 'OK') return true;
-        else return false;
+        $this->curl->post($url, $data, 'json');
 
+        if ($this->curl->result['errmsg'] === 'OK') return true;
+        return false;
     }
 
 }

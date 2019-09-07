@@ -1,4 +1,4 @@
-# zix框架 v1.3
+# zix框架 v1.3.3
 
 一款轻量级，针对微信公众号，微信小程序，微信页，微信支付等后台封装开发框架，
 
@@ -29,31 +29,44 @@
 ## 目录结构
 
 ```
-├── common                      公共
-│   ├── BaseController.php          基础控制器
-│   ├── MysqlBaseModel.php          基础模型
-│   ├── Config.php                  配置文件
-│   └── Router.php                  路由文件
-├── core                        核心
-│   ├── Bootstrap.php               引导文件
-│   └── Provider.php                依赖注入
-├── data                        数据
-│   ├── log                         日志
-│   └── upload                      上传
-├── lib                         类库
-│   ├── catfan                      路由器
-│   ├── khazix                      框架类
-│   ├── monolog                     日志
-│   ├── noahbuscher                 ORM
-│   ├── pimple                      DI
-│   └── psr                         PSR标准
-├── module                      模块
-│   ├── manage                      模块名
-│   │   ├── controller              控制器
-│   │   ├── model                   模型
-│   │   └── view                    视图
-├── public                      公开
-│   └── index.php                   入口文件
+├── common                                  公共
+│   ├── BaseController.php                      基础控制器
+│   └── MysqlBaseModel.php                      基础模型
+├── config                                  配置
+│   ├── development                             开发环境配置目录
+│   │   └── setting.php                         
+│   ├── routing.php                             路由表
+│   ├── service.php                             服务注册表
+│   └── setting.php                             配置表
+├── core                                    核心
+│   ├── Bootstrap.php                           引导文件
+│   ├── ConfigLoader.php                        配置加载器
+│   └── Provider.php                            依赖加载器
+├── data                                    数据
+│   ├── log                                     日志
+│   └── upload                              
+├── lib                                     类库
+│   ├── catfan                                  ORM
+│   ├── khazix                                  自制类
+│   │   ├── Curl.php                                Curl请求封装
+│   │   ├── JWT.php                                 JWT鉴权封装
+│   │   ├── Request.php                             用户交互数据封装
+│   │   ├── Sms.php                                 短信API
+│   │   ├── Utils.php                               工具类
+│   │   └── Wxaccount.php                           微信公众号API
+│   ├── monolog                                 日志
+│   ├── noahbuscher                             路由
+│   ├── pimple                                  依赖注入
+│   └── psr                                     PSR标准
+│       ├── container
+│       └── log
+├── module                                  模块
+│   └── manage                                  模块名
+│       ├── controller                              控制器
+│       ├── model                                   模型
+│       └── view                                    视图
+├── public                                  开放
+│   └── index.php                               入口文件
 ├── README.md
 
 ```
@@ -114,19 +127,223 @@ extension=/usr/lib64/php/modules/redis.so
 
 整体规范遵循 [PSR](http://psr.phphub.org/) 标准
 
-路由规范遵循 [RESTful API](http://www.ruanyifeng.com/blog/2018/10/restful-api-best-practices.html) 标准
+路由规范遵循 [RESTful API](http://www.ruanyifeng.com/blog/2018/10/restful-api-best-practices.html) 风格
 
 
 - 命名规范
 
-所有的文件名，目录名(除类文件名外) 均为小写
+文件名(filename), 空间名(namespace), 类名(class) 一致性参考 PSR-4 ，首字母均大写
 
-类文件名，命名空间，类名 均首字母大写
+目录名，和普通php文件均全小写，其他没有要求
 
 
 - 编码规范
 
 数据库，前后端，缓存等统一为 `UTF-8` 编码，时区设置为标准时间 `UTC`
+
+### 引导流程
+
+入口文件定义一些路径常量，然后引入 bootstrap 程序来引导框架，分以下步骤:
+
+1. 初始化自动加载器   
+2. 初始化配置加载器    
+3. 初始化依赖加载器    
+4. 初始化路由加载器    
+
+这些过程可在 `Core\Bootstrap->__construct()` 看到
+
+
+### 自动加载
+
+- 加载规则
+
+当使用`use`引入对象时，根据`PSR-4`一致性原则，通过`namespace`寻找类对应的文件路径并尝试引入，
+
+在引入失败情况下，会到 `lib/` 目录下进行尝试引入，再失败的情况则抛出异常，因此项目并非完全遵循 PSR-4 标准。
+
+- 加载示例
+
+1. 下面的代码会根据PSR-4一致性原则引入`namespace`对应文件路径的类文件
+
+``` php
+use Module\Manager\Controller\Goods;
+```
+
+将引入   
+
+``` php  
+require_once('module/manage/controller/goods.php');
+```
+
+2. 下面的代码会尝试到 `lib` 下根据`namespace`作为相对路径寻找类文件
+
+``` php
+use Khazix\Curl;
+```
+
+将引入
+
+``` php
+require_once('lib/khazix/curl.php');
+```
+
+3. 下面的情况会抛出异常
+
+```
+use NoExist\ClassName;
+```
+
+将抛出
+
+``` php
+trigger_error("Unable to load class: $class", E_USER_WARNING);
+```
+
+### 配置加载
+
+#### 概述
+
+配置文件均以 `return array` 的php文件来描述
+
+配置加载器: `core/ConfigLoader`    
+配置数据目录:  `config/`    
+生产环境配置文件:  `config/setting.php`    
+开发环境配置文件:  `config/development/setting.php`
+
+
+可配置项:
+
+1. 程序配置: setting.php       
+2. 路由配置: routing.php       
+3. 服务配置: service.php       
+
+默认情况下，会使用生产环境的配置，如果需要使用开发环境的配置，需要在命令行设置环境变量:
+
+``` sh
+set APP_ENV='development';
+```
+
+#### 路由配置:
+
+规则
+
+``` php
+[method, pathinfo, action],
+```
+
+示例
+
+``` php
+['post', '/wxaccount/menu', 'createMenu'],
+```
+
+读取路由表
+
+``` php
+(new \Core\ConfigLoader())->get('routing'); //array
+```
+
+#### 程序配置:
+
+规则
+
+``` 
+[ name => options ],
+```
+
+示例
+
+``` php
+'mysql' => [
+    'host'     => 'localhost',
+    'username' => 'root',
+    'password' => 'root',
+    'database' => 'test',
+],
+
+```
+
+读取配置信息
+
+``` php
+(new \Core\ConfigLoader())->get('mysql'); //array
+```
+
+#### 服务配置:
+
+概述
+
+服务配置：指的是以配置文件形式描述一些需要以服务的形式注册到容器中的类，
+
+将来可在其他类需要这些使用这些服务时进行依赖注入。
+
+
+
+
+
+规则
+
+
+```
+'service_name' => [
+    'dynamic' => (bool) true,
+    'class'   => (string) namespace,
+    'params'  => (array) construct_sequence_params,
+    'extend'  => (callable) function($obj, $dj) {}
+]
+
+```
+
+说明
+
+- service\_name
+
+服务名，读取配置文件时会根据服务名来选择相应的配置，使用容器的服务也跟据此名称。
+
+- dynamic 
+
+为 `true` 时使用动态注册，否则使用静态注册
+
+静态注册：每次从容器里获取的都是同一个对象，只有首次使用才会实例化一个对象，其他均引用该对象  
+
+动态注册：每次从容器里读取服务时，都会实例化出一个不同的对象，因此可以设置不同初始化参数
+
+
+- class
+
+指明服务类的域名空间路径，如 '\\Khazix\\Curl' 注意需要双斜杠转义
+
+- params
+
+初始化参数，会以 `new $class(...$params)` 方式传给 `__construct`
+
+因此请确保 $params 每个参数的顺序和对象实例化构造参数的顺序一致
+
+如果需要读取配置文件，可以在前面加上 @ 符号，`__function_parse_params` 会尝试读取配置文件
+
+服务名为 `mysql`, 初始化参数为 `['@username', '@notice_this_is_password']`, 那么解析后会变成如下
+
+`['root', '@notice_this_is_password']`
+
+- extend
+
+扩展匿名函数，对已经初始化后的服务进行扩展，如 redis 的初始连接，具体参考 [pimple文档] (https://packagist.org/packages/pimple/pimple)
+
+``` php
+'redis' => [
+    'extend' => function($obj, $di) {
+        $config = $di['config'];
+        $obj->connect($config['host'], $config['port']);
+        return $obj;
+    };
+]
+```
+
+
+示例
+
+参阅代码 `config/service.php`
+
 
 ### 类库
 
@@ -160,29 +377,6 @@ extension=/usr/lib64/php/modules/redis.so
 
 这里对 monolog 进行了一些魔改，待会补充新增功能文档说明
 
-### 自动加载
-
-- 加载规则
-
-默认情况直接以 `namespace` 作为文件路径引入，如
-
-```
-use Module\Manager\Controller\Goods;
-
-//same as:
-require_once('module/manage/controller/goods')
-```
-
-如果找不到会尝试在类库目录下寻找文件
-
-```
-use Khazix\Curl;
-
-//same as:
-require_once('lib/khazix/curl');
-```
-
-再找不到的情况下，会直接报错
 
 
 ### 路由
@@ -301,9 +495,3 @@ $this->reply(501, '数据库执行失败');
 $this->reply(200, 'Ok', ['name'=>'test', 'age'=>'ok']);
 $this->reply(302, 'Moved Permanently', $url);
 ```
-
-
-
-
-
-# zix

@@ -15,14 +15,22 @@ class Wxaccount
         $this->appsecret = $secret;
 
         if ($di) {
-            $this->setDI($di);
+            $this->setContainer($di);
         }
             
     }
 
     //设置依赖注入
-    public function setDI($di){
+    public function setContainer($di){
+        $this->_di = $di;
+
+        $this->config = $di['config'];
+        $this->curl = $di['curl'];
         $this->redis = $di['redis'];
+        
+        $this->config->set('logger', 'channel', 'wxaccount');
+        $this->logger = $di['logger'];
+        $this->logger->setExtra('format', 'json');
     }
 
     //消息接口校验
@@ -45,12 +53,12 @@ class Wxaccount
     {
         $recvStr = file_get_contents("php://input");
         if(!$recvStr){
-            Log::write('no post data', 'recv');
+            $this->logger->notice('No post data');
             return false;
         }
 
-        Log::write($recvStr, 'data');
-        $recvData = Xml::load($recvStr);
+        $this->logger->printXml('receive post data', $recvStr);
+        $recvData = Utils::xml_decode($recvStr);
 
         $this->$sendData['ToUserName'] = $recvData['FromUserName'];
         $this->$sendData['FromUserName'] = $recvData['ToUserName'];
@@ -66,14 +74,13 @@ class Wxaccount
     public function reply($mediaData){
         $sendData = $this->$sendData;
         $sendData = array_merge($sendData, $mediaData);
-        $sendXml = Xml::dump($sendData);
-        Log::write($sendXml, 'send');
+        $sendXml = Utils::xml_decode($sendData, true);
+        $this->logger->printXml('send data', $sendXml);
         echo $sendXml;
         exit;     
     }
 
     public function sendText($content) {
-        Log::dump($content);
         $this->reply(array(
             'MsgType' => 'text',
             'Content' => $content,
@@ -136,8 +143,7 @@ class Wxaccount
     public function mreply($data)
     {
         $url = "https://api.weixin.qq.com/cgi-bin/message/mass/send?access_token={$this->getAccessToken()}";
-        Log::dump($data);
-        Http::postJson($url, $data);
+        $this->curl->post($url, $data, 'json');
         exit;
     }
 
@@ -199,7 +205,8 @@ class Wxaccount
             'data'=> $data,
         );
 
-        return Http::postJson($url, $data);
+        $this->curl->post($url, $data, 'json');
+        return $this->curl->result;
     }
 
     /************************************/
@@ -211,9 +218,10 @@ class Wxaccount
         if ($media_id) return $media_id;
 
         $url = "https://api.weixin.qq.com/cgi-bin/media/upload?access_token={$this->getAccessToken()}&type={$type}";
-        $res = Http::postFile($url, 'media', $filename);
 
-        if ($res) {
+        $this->curl->post($url, ['file'=>$filename], 'file');
+
+        if ($this->curl->result) {
             $this->redis->set("media_{$type}_{$filename}", $res['media_id'], 259200);
             return $res['media_id'];
         }
@@ -224,7 +232,8 @@ class Wxaccount
     public function getTmpMedia($mediaId)
     {
         $url = "https://api.weixin.qq.com/cgi-bin/media/get?access_token={$this->getAccessToken()}&media_id={$mediaId}";
-        return Http::get($url);
+        $this->curl->get($url);
+        return $this->result;
     }
 
     /************************************/
@@ -251,13 +260,14 @@ class Wxaccount
         $appsecret = $this->appsecret;
         $url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={$appid}&secret={$appsecret}&code={$code}&grant_type=authorization_code";
 
-        $res = Http::get($url);
-        return $res;
+        $this->curl->get($url);
+        return $this->curl->result;
     }
 
     public function getUserData($openid, $token){
         $url = "https://api.weixin.qq.com/sns/userinfo?access_token={$token}&openid={$openid}&lang=zh_CN";
-        return Http::get($url);
+        $this->curl->get($url);
+        return $this->curl->result;
     }
 
     /************************************/
@@ -270,8 +280,9 @@ class Wxaccount
         if (!$accessToken){
             $url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={$this->appid}&secret={$this->appsecret}";
 
-            Log::write($url, 'get token');
-            $data = Http::get($url);
+            $this->logger->info('send api: get token', $url);
+            $this->curl->get();
+            $data = $this->curl->result;
 
             $this->redis->set('access_token', $data['access_token'], 7200);
             $accessToken = $data['access_token'];
@@ -285,7 +296,8 @@ class Wxaccount
     {
         $url = "https://api.weixin.qq.com/cgi-bin/user/info?access_token={$this->getAccessToken()}&openid={$openId}&lang=zh_CN";
 
-        return Http::get($url);
+        $this->curl->get($url);
+        return $this->curl->result;
     }
 
     //生成二维码
@@ -308,7 +320,10 @@ class Wxaccount
             ]
         ];
 
-        $res = Http::postJson($url, $data);
+        $this->curl->post($url, $data, 'json');
+
+        $res= $this->curl->result;
+
         if (isset($res['url'])){
             $this->redis->set("qrcode_{$scene}_url", $res['url'], $expire);
         }
@@ -316,7 +331,8 @@ class Wxaccount
     }
 
     //根据时间和类型判断参数类型
-    protected function getQrSceneType($scene, $expire){
+    protected function getQrSceneType($scene, $expire)
+    {
         if (is_string($scene)){
             if ($expire == 0){
                 return 'QR_LIMIT_STR_SCENE';
@@ -336,8 +352,12 @@ class Wxaccount
     public function buildMenu($setting)
     {
         $url = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token={$this->getAccessToken()}";
-        Log::write($url, 'build menu');
-        return Http::postJson($url, $setting);
+
+        $this->logger->info('send api: build menu', $url);
+
+        $this->curl->post($url, $setting, 'json');
+
+        return $this->curl->result;
     }
 
 

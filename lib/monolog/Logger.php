@@ -517,6 +517,19 @@ class Logger implements LoggerInterface, ResettableInterface
         $this->addRecord(static::DEBUG, (string) $message, $context);
     }
 
+    public function printXml(string $message, string $xml, array $context = []): void
+    {
+        $extra = $this->extra;
+
+        $this->setExtra('format', 'xml');
+
+        $this->variables = $xml;
+        
+        $this->addRecord(static::DEBUG, $message, $context);
+
+        $this->setExtra('format', $extra);
+    }
+
 
     /**
      * Adds a log record at the DEBUG level.

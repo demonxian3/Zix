@@ -1,14 +1,12 @@
 <?php
 namespace Khazix;
 
-//判断是关联数组 还是数字数组
 if (!function_exists('is_assoc')){
     function is_assoc($arr){
         if( !is_array($arr) ) return false;
         return array_keys($arr) !== range(0, count($arr) - 1);
     }
 }
-
 
 class Utils
 {
@@ -90,13 +88,6 @@ class Utils
         return $_xml->asXML(); 
     } 
 
-    public function xml_decode($str){
-        $obj = simplexml_load_string($str, "SimpleXMLElement", LIBXML_NOCDATA);
-        $arr = json_decode(json_encode($obj),true);
-        return $arr;
-    }
-
-
     public function xml_encode($arr)  
     {
         return '<xml>' . self::xml_build($arr) . '</xml>'.PHP_EOL;
@@ -136,4 +127,10 @@ class Utils
         return $str;
     }
 
+
+    public function xml_decode($str, $isArr=false){
+        $obj = simplexml_load_string($str, "SimpleXMLElement", LIBXML_NOCDATA);
+        $arr = json_decode(json_encode($obj), $isArr);
+        return $arr;
+    }
 }

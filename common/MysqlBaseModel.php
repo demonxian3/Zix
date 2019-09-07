@@ -1,5 +1,5 @@
 <?php
-namespace common;
+namespace Common;
 
 use lib\Medoo;
 

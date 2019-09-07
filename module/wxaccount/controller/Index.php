@@ -2,15 +2,14 @@
 namespace Module\Wxaccount\Controller;
 
 use Khazix\Request;
-use Khazix\Log;
-use Khazix\Http;
+use Common\BaseController;
 
-class Index
+class Index extends BaseController
 {
     public function __construct(){
-        global $_DI;
-        $this->di = $_DI;
-        $this->wx = $_DI['wxaccount'];
+        var_dump($this->_di);exit;
+        $this->wx = $this->_di['wxaccount'];
+        $this->logger = $this->_di['logger'];
     }
 
     //入口
@@ -35,6 +34,7 @@ class Index
             }
 
             //监听客户端消息
+            $this->logger->info('begin listen');
             $this->recvData = $this->wx->listen();
             $msgType = $this->recvData['MsgType'];
             $this->selectType($msgType);
@@ -128,42 +128,8 @@ class Index
     }
 
     public function eventHandle(){
-        $openId = $this->recvData['FromUserName'];
-        $event = strtolower($this->recvData['Event']);
-        $eventKey = $this->recvData['EventKey'];
-
-    
-        switch ($event) {
-            case 'subscribe':
-
-            case 'click':
-                switch ($eventKey) {
-                    case 'info':
-                        Log::write($openId, 'id');
-                        $userInfo = $this->wx->getUserInfo($openId);
-                        $str  = '昵称: '. $userInfo['nickname'] .CR;
-                        $str .= '性别: '. ($userInfo['sex'] == 1 ? '男' : '女') .CR;
-                        $str .= '住址: '. $userInfo['province']. $userInfo['city'] .CR ;
-                        $str .= '头像: '. $userInfo['headimgurl'] .CR ;
-                        $str .= '备注: '. $userInfo['remark'] .CR ;
-
-                        $this->wx->sendText($str);
-                        break;
-
-                    case 'news':
-                        $url = $wx->getAuthCodeUrl();
-                        header("Location: $url");exit;
-                        $this->wx->sendText('开发中...');
-                        break;
-                }
-
-                break;
-
-            default:
-                # code...
-                break;
-        }
     }
+
     public function uploadMedia() {
         $tmpname = Request::getFileTmpName();
         $filename = Request::getFileName();

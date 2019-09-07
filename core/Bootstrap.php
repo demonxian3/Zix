@@ -1,17 +1,19 @@
 <?php
 namespace Core;
 
-use Common\Router;
 use Noahbuscher\Macaw;
 use Pimple\Container;
 
 class Bootstrap
 {
+    private $configLoader;
+
     //引导程序
     public function __construct(){
-        $this->autoload();
-        $this->buildDI();
-        $this->importRoute();
+        $this->initAutoloader();
+        $this->initConfigLoader();
+        $this->initProvider();
+        $this->initRouter();
     }
 
     //启动运行
@@ -19,8 +21,9 @@ class Bootstrap
         Macaw::dispatch();
     }
 
-    //自动加载
-    public function autoload() {
+    //自动加载器
+    public function initAutoloader() 
+    {
         spl_autoload_register(function($class){
             $class = strtr($class, '\\', DS);
             $filename = basename($class);
@@ -39,24 +42,35 @@ class Bootstrap
         },true, true);
     }
 
-    //依赖注入
-    public function buildDI(){
+    //配置加载器
+    public function initConfigLoader()
+    {
+        $env = getenv('APP_ENV');
+
+        $this->configLoader = new ConfigLoader($env);
+    }
+
+    //依赖加载器
+    public function initProvider()
+    {
         global $_DI;
         $container = new Container();
-        $provider = new Provider();
+        $provider = new Provider($this->configLoader);
+
         $provider->register($container);
         $_DI = $container;
     }
 
+    //路由加载器
+    public function initRouter()
+    {
+        $routings = $this->configLoader->get('routing');
 
-    //导入路由
-    public function importRoute(){
-        foreach (Router::config as $route){
+        foreach ($routings as $route){
             $method = $route[0];
             $path = $route[1];
             $action = $route[2];
-
-        
+ 
             $controller = ucfirst(basename($path));
             $module = ucfirst(ltrim(dirname($path), '/'));
             $action = "Module\\$module\\Controller\\$controller@$action";

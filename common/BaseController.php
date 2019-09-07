@@ -1,24 +1,24 @@
 <?php
 
-namespace common;
-
-use lib\Request;
+namespace Common;
 
 class BaseController {
 
-    public function reply($code, $msg, $data=[]){
+    public $_di;
+
+    public function __construct()
+    {
+        global $_DI;
+        $this->_di = $_DI;
+    }
+
+    public function reply($code, $msg, $data=[])
+    {
         echo json_encode([
             'code' => $code,
             'msg' => $msg,
             'data' => $data,
         ]);exit;
-    }
-
-    public function connectRedis()
-    {
-        $redis = new \Redis();
-        $redis->connect('127.0.0.1', 6379);
-        return $redis;
     }
 
 }
