@@ -617,6 +617,9 @@ $this->reply(302, 'Moved Permanently', $url);
 
 - [psr](https://github.com/php-fig)       PSR标准
 
-- [redis](http://github.com/phpredis/phpredis/里对 monolog 进行了一些魔改，待会补充新增功能文档说明)      Redis
+- [redis](http://github.com/phpredis/phpredis/)      Redis
+
+
+备注：这里对 monolog 进行了一些魔改，待会补充新增功能文档说明
 
 

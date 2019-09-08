@@ -10,6 +10,8 @@ class Bootstrap
 
     //引导程序
     public function __construct(){
+        $this->checkVersion();
+        exit;
         $this->initAutoloader();
         $this->initConfigLoader();
         $this->initProvider();
@@ -17,8 +19,18 @@ class Bootstrap
     }
 
     //启动运行
-    public function run(){
+    public function run()
+    {
         Macaw::dispatch();
+    }
+
+    //检测版本
+    public function checkVersion()
+    {
+        if (version_compare(PHP_VERSION, '7.1', '>')) {
+
+            trigger_error("PHP version at least 7.1 or more, current version is ".PHP_VERSION, E_USER_ERROR);
+        }
     }
 
     //自动加载器
