@@ -132,9 +132,7 @@ extension=/usr/lib64/php/modules/redis.so
 
 - 命名规范
 
-文件名(filename), 空间名(namespace), 类名(class) 一致性参考 PSR-4 ，首字母均大写
-
-目录名，和普通php文件均全小写，其他没有要求
+类文件名(filename), 空间名(namespace), 类名(class) 一致性参考 PSR-4 ，首字母均大写，其他目录名和普通文件均小写
 
 
 - 编码规范
@@ -145,13 +143,22 @@ extension=/usr/lib64/php/modules/redis.so
 
 入口文件定义一些路径常量，然后引入 bootstrap 程序来引导框架，分以下步骤:
 
-1. 初始化自动加载器   
-2. 初始化配置加载器    
-3. 初始化依赖加载器    
-4. 初始化路由加载器    
+1. 检查版本是否大于7.1
+2. 初始化自动加载器   
+3. 初始化配置加载器    
+4. 初始化依赖加载器    
+5. 初始化路由加载器    
 
 这些过程可在 `Core\Bootstrap->__construct()` 看到
 
+
+### 版本检测
+
+如果PHP版本小于 7.1 将无法运行该框架，会报错
+
+```
+Fatal error: PHP version at least 7.1 or more, current version is 7.2.19 in /var/www/html/sxsh/core/Bootstrap.php on line 32
+```
 
 ### 自动加载
 
@@ -159,7 +166,7 @@ extension=/usr/lib64/php/modules/redis.so
 
 当使用`use`引入对象时，根据`PSR-4`一致性原则，通过`namespace`寻找类对应的文件路径并尝试引入，
 
-在引入失败情况下，会到 `lib/` 目录下进行尝试引入，再失败的情况则抛出异常，因此项目并非完全遵循 PSR-4 标准。
+在引入失败情况下，会到 `lib/` 目录下进行尝试引入，再失败的情况则抛出异常.
 
 - 加载示例
 
@@ -210,7 +217,6 @@ trigger_error("Unable to load class: $class", E_USER_WARNING);
 生产环境配置文件:  `config/setting.php`    
 开发环境配置文件:  `config/development/setting.php`
 
-
 可配置项:
 
 1. 程序配置: setting.php       
@@ -221,6 +227,16 @@ trigger_error("Unable to load class: $class", E_USER_WARNING);
 
 ``` sh
 set APP_ENV='development';
+```
+
+#### 说明
+
+因为容器注册服务时，有时需要读取服务对应的配置，因此首先将 config 作为服务注册到容器中
+
+读取配置可用依赖注入的形式进行读取，extend扩展时也很方便的获取到 config 
+
+```php
+echo $_DI['config']->get('mysql')['database'];
 ```
 
 #### 路由配置:
@@ -277,10 +293,6 @@ set APP_ENV='development';
 
 将来可在其他类需要这些使用这些服务时进行依赖注入。
 
-
-
-
-
 规则
 
 
@@ -319,126 +331,205 @@ set APP_ENV='development';
 
 因此请确保 $params 每个参数的顺序和对象实例化构造参数的顺序一致
 
-如果需要读取配置文件，可以在前面加上 @ 符号，`__function_parse_params` 会尝试读取配置文件
+如果需要读取配置文件，可以在前面加上 @ 符号就会尝试读取配置文件
 
-服务名为 `mysql`, 初始化参数为 `['@username', '@notice_this_is_password']`, 那么解析后会变成如下
+如果读取失败，将传递原来的指，解析读取配置通过容器用 protect 注
 
-`['root', '@notice_this_is_password']`
+册的函数`__function_parse_params` 来实现, 稍后会通过例子来说明
+
 
 - extend
 
-扩展匿名函数，对已经初始化后的服务进行扩展，如 redis 的初始连接，具体参考 [pimple文档] (https://packagist.org/packages/pimple/pimple)
+扩展匿名函数，对已经初始化后的服务进行扩展，如 redis 的初始连接，具体参考 [pimple文档](https://packagist.org/packages/pimple/pimple)
+
+需要读取配置的化，可以在 `$di['config']` 中获取
 
 ``` php
 'redis' => [
     'extend' => function($obj, $di) {
-        $config = $di['config'];
+        $config = $di['config']->get('redis');
         $obj->connect($config['host'], $config['port']);
         return $obj;
     };
 ]
 ```
 
+示例
+
+```
+'mysql' => [
+    'dynamic' => false,
+    'class'   => '\\Catfan\\Medoo',
+    'params'  => [
+        [
+            'database_type' => 'mysql',
+            'server'        => 'localhost',
+            'database_name' => '@database',
+            'username'      => '@username',
+            'password'      => '@this_is_pwd',
+        ],
+    ],
+],
+```
+
+如示例所示采用静态注册，注册服务名为 `mysql`，类的路径为`\\Catfan\\Medoo`
+
+初始化参数中，`database_name` `username` `password` 这三个参数值开头有@符号
+
+解析器将会尝试读取:
+
+```
+$_DI['config']->get('mysql')['database'];
+$_DI['config']->get('mysql')['username'];
+$_DI['config']->get('mysql')['this_is_pwd'];
+```
+
+很不巧的是，密码首字符@并非希望读取配置文件，而是恰巧密码刚好首字母@，考虑
+
+到此情况，这里只是尝试读取，读取不到不会报错，仍然会把 `@this_is_pwd` 传给construct
+
+因此最终初始化参数如下:
+
+```php
+new \Catfan\Medoo([
+    'database_type' => 'mysql',
+    'server'        => 'localhost',
+    'database_name' => 'test',
+    'username'      => 'root',
+    'password'      => '@this_is_pwd'
+]);
+
+```
+
+动态注册
+
+如果希望每次从容器中获取服务时，都需要实例化一个新的对象，而且初始化参数可以动态改变
+
+那么可以采用动态注册， `dynamic=true`，示例如下
+
+``` php
+
+'logger' => [
+    'dynamic' => true,
+    'class'   => '\\Monolog\\Logger',
+    'params'  => [ '@channel' ],
+    'extend'  => function($obj, $di) {
+        $obj->pushHandler($di['logger_handler']);
+        return $obj;
+    },
+]
+
+```
+这里指明了动态参数，`params` 会在每次实例化时重新读取配置文件
+
+`extend` 扩展函数用于修改从容器读取服务返回已实例化的对象，
+
+在扩展函数中若需要其他依赖服务，可以直接从 $di 中获取
+
+注册好后，就可以如下来声明不同频道的logger
+
+``` php
+
+$_DI['config']->set('logger', 'channel', 'manage');
+$logger = $_DI['logger'];   //this is manage channel logger
+
+$_DI['config']->set('logger', 'channel', 'wxaccount');
+$logger = $_DI['logger'];   //this is wxaccount channel logger
+
+```
+
+
+
+读取
+
+```
+$redis = $_DI['redis'];
+$redis->set('name', 'khazix', 300);
+```
+
+### 路由加载
+
+读取 routing 的配置列表，路由配置语法如下 
+
+```
+[method, routing, action]
+```
+
+- method 支持以下几种
+
+    1. GET    
+    2. POST    
+    3. PUT     
+    4. DELETE     
+
+- routing 由两部分组成
+
+```
+module/controller
+```
+
+module 是模块名，表示业务所处的平台，一般如下:
+
+admin       => 后台管理系统(通常指PC)    
+wxpage      => 微信页      
+wxaccount   => 微信公众号    
+wxgame      => 微信小游戏      
+wxapp       => 微信小程序       
+android     => 针对手机的API后台      
+IOS         => 针对手机的API后台      
+
+
+controller 是控制器名，关于控制器，后面会单独说明
+
+- action 行为
+
+routing 仅仅定位到哪个控制器， 然后根据`method`来定位具体的action
+
+与`Thinkphp` 的`pathinfo`直接定位到 action不同。具体说明参见控制器
+
+
+这里的设计思想参见阮一峰RESTful文章提出的建议进行尝试: 
+
+即除定位目标名词使用`pathinfo` 其他辅助参数放到`queryString`
 
 示例
 
-参阅代码 `config/service.php`
+``` php
 
-
-### 类库
-
-所有类库文件均放在 `/lib` 下，没有使用 composer 加载，加载规则参考下一节：自动加载
-
-类库路径 `lib/`
-
-#### 自制类库: `lib/khazix`
-
-- Curl          构造http请求包
-- Request       获取用户交互数据
-- Utils         通用工具
-- Wxaccount     微信公众号接口封装
-- Xml           微信xml封装
-- Sms           手机短信封装
-
-#### 第三方类库: 
-
-`lib/` 下除自制类库，其他均为第三方类库，均来源与composer，下面是他们所对应的文档
-
--[monolog](https://github.com/Seldaek/monolog)     日志系统
-
--[pimple](https://github.com/silexphp/Pimple)      依赖注入    
-
--[macaw](https://github.com/NoahBuscher/Macaw)       路由器
-
--[medoo](https://medoo.in/)       ORM
-
--[psr](https://github.com/php-fig)         PSR标准
-
-
-这里对 monolog 进行了一些魔改，待会补充新增功能文档说明
-
-
-
-### 路由
-
-这里是对阮一峰提出的提议进行尝试: 除目标名词使用`pathinfo` 其他辅助参数放到`queryString`
-
-优点:
-
-- 避免路由泛滥
-- 减少路由命名思考浪费的时间
-- 解决路由冲突
-
-路由格式:
+['GET',     '/manage/goods/(:num)',        'getGoodById'],
+['GET',     '/manage/goods',               'getGoodsList'],
+['PUT',     '/manage/goods/(:num)',        'updateGood'],
+['POST',    '/manage/goods',               'createGood'],
+['DELETE',  '/manage/goods/(:num)',        'deleteGood'],
 
 ```
-/module/controller
-```
 
-`module` 是模块名，用于描述业务逻辑所处的平台，如下
-
-admin       => 后台管理系统(通常指PC)
-wxpage      => 微信页
-wxaccount   => 微信公众号
-wxgame      => 微信小游戏
-wxapp       => 微信小程序
-android     => 针对手机的API后台
-IOS         => 针对手机的API后台
-
-`controller` 是控制器名，用于处理业务逻辑，命名上有几点建议:
-
-1. 尽可能使用名词而不是动词: appointment 要好于 appoint
-2. 尽可能使用复数: users 要好于 user
-3. 尽可能`控制器名`和`表名`和`模型名`一致
-
-示例:
-
-```
-GET    /manage/appointments?type="invite"
-POST   /manage/appointments?type="appoit"
-PUT    /manage/appointments?mode="coach"
-DELETE /manage/appointments?mode="trainee"
-```
-
-路由仅将流程定位到控制器，而具体的行为根据 `queryString` 来做选择，因此每个控制器
-
-都要有对 GET POST PUT DELETE 这个四个方法的接收入口，入口会处理 `queryString` 从而
-
-分发到不同的 `action method` 上面
+除 id 参数可以体现在路由上，其他需要传入都放在query string里
 
 
-## 模型
+### 控制器
 
-上面提到控制器名 与 表名一致，操作控制器相当于操作表，如下
+以上 bootstrap 程序引导起来后，通过 `bootstrap->run()` 就开始监听请求了
 
-```
-GET     admin/users  =>  SELECT * FROM users; 
-PUT     admin/users  =>  UPDATE users SET {some $_PUT};
-DELETE  admin/users  =>  DELETE FROM users {some $_WHERE};
-```
+然后会更加请求段传过来的 `pathinfo` 来定位控制器和方法。
+
+这里控制器设计还是比较粗糙，后面会根据实际使用来进行完善，控制器主要作用
+
+是接收 query string 或者其他 `php://input` 的数据来进行处理，控制器合理的
+
+设计是不直接进行业务处理，而是交给 manager， 管理器会根据 query string 来
+
+分配具体的业务执行器 business。此处补充
 
 
-## 视图
+### 模型
+
+尽可能将所有数据库操作通过模型完成，传入查询需要的条件和参数，返回结果集
+
+这里需要使用 implements 来高度抽象一些增删改查的传入值和返回值
+
+
+### 视图
 
 在此框架中没有视图，因为前后端完全分离，视图可以采用 nodejs 或者 原生js 结合`vue` `jquery`
 
@@ -451,7 +542,7 @@ DELETE  admin/users  =>  DELETE FROM users {some $_WHERE};
 尽管代码放在一起，但是视图代码和后台代码没有任何关联和影响，仅有的联系就是通过 API请求进行数据交互
 
 
-## 鉴权系统
+### 鉴权系统
 
 采用前后端分离的框架，鉴权系统上都比较难处理，传统MVC框架登录页可以直接跳转注册 session 或者 cookie
 
@@ -495,3 +586,37 @@ $this->reply(501, '数据库执行失败');
 $this->reply(200, 'Ok', ['name'=>'test', 'age'=>'ok']);
 $this->reply(302, 'Moved Permanently', $url);
 ```
+
+
+## 类库文档
+
+`lib/khazix` 下均是自制的，其他`lib/`下均从composer里捞出来的，下面是一些可能会用到的文档
+
+- - -
+自制类文档 (//TODO)
+
+- [curl](https://github.com/demonxian3/php-simple-curl)       curl
+- [Request]         获取用户交互数据       
+- [Utils]           通用工具       
+- [Wxaccount]       微信公众号接口封装       
+- [Xml]             微信xml封装       
+- [Sms]             手机短信封装       
+
+这里还对 monolog 进行了一些魔改，待会补充新增功能文档说明
+
+- - - 
+第三方类文档
+
+- [monolog](https://github.com/Seldaek/monolog)       日志系统
+
+- [pimple](https://github.com/silexphp/Pimple)       依赖注入    
+
+- [macaw](https://github.com/NoahBuscher/Macaw)       路由器
+
+- [medoo](https://medoo.in/)       ORM
+
+- [psr](https://github.com/php-fig)       PSR标准
+
+- [redis](http://github.com/phpredis/phpredis/里对 monolog 进行了一些魔改，待会补充新增功能文档说明)      Redis
+
+
