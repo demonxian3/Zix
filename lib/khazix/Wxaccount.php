@@ -9,7 +9,6 @@ class Wxaccount
 
     public function __construct($token, $appid, $secret, $di=null)
     {
-
         $this->token = $token;
         $this->appid = $appid;
         $this->appsecret = $secret;
@@ -24,12 +23,11 @@ class Wxaccount
     public function setContainer($di){
         $this->_di = $di;
 
-        $this->config = $di['config'];
         $this->curl = $di['curl'];
         $this->redis = $di['redis'];
         
-        $this->config->set('logger', 'channel', 'wxaccount');
         $this->logger = $di['logger'];
+        $this->logger->setChannel('Lib Wxaccount');
         $this->logger->setExtra('format', 'json');
     }
 
@@ -57,8 +55,8 @@ class Wxaccount
             return false;
         }
 
-        $this->logger->printXml('receive post data', $recvStr);
-        $recvData = Utils::xml_decode($recvStr);
+        $this->logger->printXml('receive data', $recvStr);
+        $recvData = Utils::xml_decode($recvStr, true);
 
         $this->$sendData['ToUserName'] = $recvData['FromUserName'];
         $this->$sendData['FromUserName'] = $recvData['ToUserName'];
@@ -74,7 +72,8 @@ class Wxaccount
     public function reply($mediaData){
         $sendData = $this->$sendData;
         $sendData = array_merge($sendData, $mediaData);
-        $sendXml = Utils::xml_decode($sendData, true);
+        $sendXml = Utils::xml_encode($sendData, true);
+        
         $this->logger->printXml('send data', $sendXml);
         echo $sendXml;
         exit;     
@@ -195,17 +194,27 @@ class Wxaccount
     /************************************/
     /*****         模板消息           ****/
     /************************************/
-    public function sendTemplate($openid, $template_id, $detail, $data){
+    public function setTemplateMsg(string $msg): array
+    {
+        return ['value'=>$msg, 'color'=>'#000'];
+    }
+
+    public function sendTemplate($openid, $template_id, $detail, $msg){
         $url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={$this->getAccessToken()}";
+
+        foreach ($msg as $key => $value) {
+            $msg[$key] = $this->setTemplateMsg($value);
+        }
         
         $data = array(
             'touser' => $openid,
             'template_id' => $template_id,
             'url' => $detail,
-            'data'=> $data,
+            'data'=> $msg,
         );
 
         $this->curl->post($url, $data, 'json');
+        $this->logger->print(__METHOD__, ['url'=>$url, 'data'=>$data, 'res'=>$this->curl->result]);
         return $this->curl->result;
     }
 
@@ -243,18 +252,17 @@ class Wxaccount
     {
         $appid = $this->appid;
         $appsecret = $this->appsecret;
-        $redirectUri = $url;
         $responseType = 'code';
         $scope = 'snsapi_userinfo';
         $state = urlencode($state);
-        $redirectUri = urlencode($redirectUri);
+        $redirectUri = urlencode($url);
 
         $url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid={$appid}&redirect_uri={$redirectUri}&response_type={$responseType}&scope={$scope}&state={$state}#wechat_redirect";
 
         return $url;
     }
 
-    public function getTokenData($code){
+    public function getAuthAccessToken($code){
 
         $appid = $this->appid;
         $appsecret = $this->appsecret;
@@ -264,7 +272,7 @@ class Wxaccount
         return $this->curl->result;
     }
 
-    public function getUserData($openid, $token){
+    public function getWxpageUserInfo($openid, $token){
         $url = "https://api.weixin.qq.com/sns/userinfo?access_token={$token}&openid={$openid}&lang=zh_CN";
         $this->curl->get($url);
         return $this->curl->result;
@@ -280,9 +288,9 @@ class Wxaccount
         if (!$accessToken){
             $url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={$this->appid}&secret={$this->appsecret}";
 
-            $this->logger->info('send api: get token', $url);
-            $this->curl->get();
+            $this->curl->get($url);
             $data = $this->curl->result;
+            $this->logger->print(__METHOD__, ['url'=>$url, 'data'=>$data]);
 
             $this->redis->set('access_token', $data['access_token'], 7200);
             $accessToken = $data['access_token'];
@@ -353,9 +361,9 @@ class Wxaccount
     {
         $url = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token={$this->getAccessToken()}";
 
-        $this->logger->info('send api: build menu', $url);
 
         $this->curl->post($url, $setting, 'json');
+        $this->logger->print(__METHOD__, ['url'=>$url, 'data'=>$this->curl->result]);
 
         return $this->curl->result;
     }

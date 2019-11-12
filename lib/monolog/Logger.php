@@ -160,7 +160,8 @@ class Logger implements LoggerInterface, ResettableInterface
         $this->name = $name;
         $this->setHandlers($handlers);
         $this->processors = $processors;
-        $this->timezone = $timezone ?: new DateTimeZone(date_default_timezone_get() ?: 'UTC');
+        //$this->timezone = $timezone ?: new DateTimeZone(date_default_timezone_get() ?: 'UTC');
+        $this->timezone = $timezone ?: new DateTimeZone('PRC');
     }
 
     public function getName(): string
@@ -477,6 +478,11 @@ class Logger implements LoggerInterface, ResettableInterface
     public function setExtra($key, $value): void
     {
         $this->extra[$key] = $value;
+    }
+
+    public function setChannel($name): void
+    {
+        $this->name = $name;
     }
 
     public function getExtra(): array

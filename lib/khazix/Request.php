@@ -1,95 +1,106 @@
 <?php
 namespace Khazix;
 
+/*
+ * @params ($key)
+ * @method getQuery(String $key="")
+ * @method getPost(String $key="")
+ * @method getPut(String $key="")
+ * @method getDelete(String $key="")
+ * @method getPatch(String $key="")
+ * @method getCookie(String $key="")
+ * @method getSession(String $key="")
+ * @method getServer(String $key="")
+ * @method getFiles(String $key="")
+ * @method getEnv(String $key="")
+ * @method saveFile(String $tmpname, String $filename)
+ *
+ */
+
 class Request
 {
-    const UPLOAD_PATH = DATA_DIR . DS . 'upload/';
+    private $uploadPath;
 
-    public static $fileData = [];
+    private $customMethods = [
+        'PUT', 'PATCH', 'DELETE'
+    ];
 
-    public function getQuery()
+    public function __construct(string $uploadPath)
     {
-        if (count($_GET)) 
-            return $_GET;
-        return NULL;
+        $this->uploadPath = $uploadPath;
     }
 
-    public function getPost()
+    public function __call($method, $arguments)
     {
-        if (count($_POST)) 
-            return $_POST;
-        return NULL;
-    }
+        if (0 !== strncmp($method, 'get', 3)) {
+            return false;
+        }
 
-    public function getPut()
-    {
-        $GLOBALS['_PUT'] = [];
-        if ($_SERVER['REQUEST_METHOD'] == 'PUT'){
-            $data = file_get_contents('php://input');
-            parse_str($data, $GLOBALS['_PUT']);
-        } 
+        $method = strtoupper(substr($method, 3));
 
-        return $GLOBALS['_PUT'];
-    }
+        $superName = '_' . $method;
 
-    public function getCookie()
-    {
-        return $_COOKIE;
-    }
+        if ($superName === '_QUERY') {
+            $superName = '_GET';
+        }
 
-    public function getDelete()
-    {
-        $GLOBALS['_DELETE'] = [];
-        if ($_SERVER['REQUEST_METHOD'] == 'DELETE'){
-            $data = file_get_contents('php://input');
-            parse_str($data, $GLOBALS['_DELETE']);
-        } 
+        if (in_array($method, $this->customMethods)) {
 
-        return $GLOBALS['_DELETE'];
-    }
+            if ($_SERVER['REQUEST_METHOD'] === $method) {
 
-    public function getFiles(){
+                $GLOBALS[$superName] = array();
 
-        $fileList = [];
+                $data = file_get_contents('php://input');
 
-        if (count($_FILES)){
-            foreach ($_FILES as $file){
-                array_push($fileList , $file);              
+                parse_str($data, $GLOBALS[$superName]);
+
             }
         }
 
-        return $fileList;
-    }
+        if (array_key_exists($superName, $GLOBALS)) {
+            if (count($arguments) > 0) {
+                if (isset($GLOBALS[$superName][$arguments[0]])) {
+                    return $GLOBALS[$superName][$arguments[0]];
+                }
+                return null;
+            }
 
-    public function getFile(){
-        if (count($_FILES)){
-            self::$fileData = array_shift($_FILES);
-            return self::$fileData;
+
+            return $GLOBALS[$superName];
         }
-        return NULL;
+
+        return null;
+
     }
 
-    public function getFileName(){
-        if (self::$fileData){
-            return self::$fileData['name'];
+    public function getRequest($key)
+    {
+        if ($this->getCookie($key)) {
+            return $this->getCookie($key);
         }
-        return self::getFile()['name'];
     }
 
-    public function getFileTmpName(){
-        if (self::$fileData){
-            return self::$fileData['tmp_name'];
-        }
-        return self::getFile()['tmp_name'];
-    }
+    public function saveFile($tmpname, $filename): string
+    {
+        try {
 
-    public function saveFile($tmpname, $filename){
-        $savepath = self::UPLOAD_PATH . $filename;
+            $savepath = $this->uploadPath .DS. $filename;
 
-        if (!file_exists($savepath)) 
+            if (!file_exists($this->uploadPath)) {
+                throw new \Exception('文件存储路径错误');
+            }
+
+            if (file_exists($savepath)) {
+                throw new \Exception('文件名已存在');
+            }
+
             move_uploaded_file($tmpname, $savepath);
 
-        return $savepath;
+            return $savepath;
+
+        } catch (\Exception $e) {
+            echo $e->getMessage();
+        }
     }
 
 }

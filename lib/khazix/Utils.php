@@ -71,7 +71,7 @@ class Utils
         return $result;
     }
 
-    public function arrayToXml($array, $root= null, $xml = null) { 
+    public static function arrayToXml($array, $root= null, $xml = null) { 
         $_xml = $xml; 
          
         if ($_xml === null) { 
@@ -128,7 +128,7 @@ class Utils
     }
 
 
-    public function xml_decode($str, $isArr=false){
+    public static function xml_decode($str, $isArr=false){
         $obj = simplexml_load_string($str, "SimpleXMLElement", LIBXML_NOCDATA);
         $arr = json_decode(json_encode($obj), $isArr);
         return $arr;
