@@ -11,7 +11,6 @@ class Bootstrap
     //引导程序
     public function __construct(){
         $this->checkVersion();
-        exit;
         $this->initAutoloader();
         $this->initConfigLoader();
         $this->initProvider();
@@ -27,7 +26,7 @@ class Bootstrap
     //检测版本
     public function checkVersion()
     {
-        if (version_compare(PHP_VERSION, '7.1', '>')) {
+        if (version_compare(PHP_VERSION, '7.1', '<')) {
 
             trigger_error("PHP version at least 7.1 or more, current version is ".PHP_VERSION, E_USER_ERROR);
         }
@@ -40,8 +39,8 @@ class Bootstrap
             $class = strtr($class, '\\', DS);
             $filename = basename($class);
             $filedir  = strtolower(dirname($class));
-            $filepath = APP_DIR . DS . $filedir . DS . $filename . EXT;
-            $libpath = LIB_DIR.DS.$filedir.DS.$filename.EXT;
+            $filepath = APP_DIR .DS. $filedir .DS. $filename . EXT;
+            $libpath  = LIB_DIR .DS. $filedir .DS. $filename . EXT;
 
             if (file_exists($filepath)){
                 require_once($filepath);
@@ -82,10 +81,13 @@ class Bootstrap
             $method = $route[0];
             $path = $route[1];
             $action = $route[2];
- 
+
+            //remove (:num) (:any) (:all) from class path
+            $classpath = preg_replace('#/\(.*?\)#', '', $route[1]);
+
             $controller = ucfirst(basename($path));
             $module = ucfirst(ltrim(dirname($path), '/'));
-            $action = "Module\\$module\\Controller\\$controller@$action";
+            $action = "$module\\Controller\\$controller@$action";
 
             Macaw::$method($path, $action);
         }

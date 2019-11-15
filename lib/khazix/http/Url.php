@@ -26,7 +26,7 @@ use Psr\Http\Message\UriInterface;
  *           userInfo                   scriptPath      pathInfo
  */
 
-class Uri implements \JsonSerializable, UriInterface
+class Url implements \JsonSerializable, UriInterface
 {
     /** @var array */
     public static $defaultPorts = [
@@ -60,10 +60,10 @@ class Uri implements \JsonSerializable, UriInterface
     private $fragment = '';
 
     /** @var string */
-    private $pathInfo;
+    private $pathInfo = '';
 
     /** @var string */
-    private $relativePath;
+    private $relativePath = '';
 
     /** @var string */
     private $basePath;
@@ -114,18 +114,23 @@ class Uri implements \JsonSerializable, UriInterface
 
         if ($pos !== false) {
             $pos = strpos($this->path, '/', $pos);
-            $this->pathInfo = substr($this->path, $pos);
-            $scriptPath = substr($this->path, 0, $pos);
-            $pos = strrpos($scriptPath, '/');
-        
-            if ($pos === false) {
-                $this->basePath = '';
-                $this->relativePath = $scriptPath;
+            if ($pos !== false) {
+                $this->pathInfo = substr($this->path, $pos);
+                $scriptPath = substr($this->path, 0, $pos);
+                $pos = strrpos($scriptPath, '/');
+            
+                if ($pos === false) {
+                    $this->basePath = '';
+                    $this->relativePath = $scriptPath;
+                } else {
+                    $this->basePath = substr($scriptPath, 0 , $pos+1);
+                    $this->relativePath = substr($scriptPath, $pos+1);
+                }
             } else {
-                $this->basePath = substr($scriptPath, 0 , $pos+1);
-                $this->relativePath = substr($scriptPath, $pos+1);
+                $pos = strrpos($this->path, '/');
+                $this->basePath = ($pos === false ? '' : substr($this->path, 0, $pos + 1));
+                $this->relativePath = substr($this->getPath(), strlen($this->basePath));
             }
-
         } else {
             $this->basePath = $this->relativePath = '';
             $this->pathInfo = $this->path;

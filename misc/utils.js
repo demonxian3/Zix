@@ -2,7 +2,7 @@ class Utils {
 
     static init()
     {
-        this.host = "https://djsp.linz.ac.cn";
+        this.host = "http://example.cn";
     }
 
     static parse(reply){

@@ -23,6 +23,11 @@ class Utils
         return $str;
     }
 
+    public function getCurrentUrl(): string
+    {
+        return $_SERVER['REQUEST_SCHEME'] .'://'. $_SERVER['HTTP_HOST'] .':'. $_SERVER['SERVER_PORT'] . $_SERVER['REQUEST_URI'];
+    }
+
 
     public function readCsvFile($filename, $titleMap, $filterList=[], $noEmptyList=[]){
         $result = [];

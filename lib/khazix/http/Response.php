@@ -6,6 +6,7 @@ namespace Khazix\Http;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\IResponse;
 
 /**
  * Notice: Case-Sensitive!!!
@@ -18,7 +19,7 @@ use Psr\Http\Message\StreamInterface;
  * 不如干脆直接大小写敏感，相对好实现一些！！
  *
  */
-class Response implements ResponseInterface, StatusCodeInterface
+class Response implements ResponseInterface, StatusCodeInterface, IResponse
 {
     /** @var string HTTP Protocol Version */
     private $version = '1.1';
@@ -83,6 +84,12 @@ class Response implements ResponseInterface, StatusCodeInterface
     public function getProtocolVersion(): string
     {
         return $this->version;
+    }
+
+    public function setProtocolVersion(string $version): self
+    {
+        $this->version = $version;
+        return $this;
     }
 
     /** {@inheritdoc} */
@@ -160,9 +167,9 @@ class Response implements ResponseInterface, StatusCodeInterface
      * @param string $name Case-insensitive header field name.
      * @return string[] An array of string values as provided for the given
      */
-    public function getHeader(string $name): array
+    public function getHeader(string $header): array
     {
-        return $this->headers[$name] ?? [];
+        return $this->headers[$header] ?? [];
     }
 
     public function getHeader_old(string $name): ?string
@@ -291,6 +298,11 @@ class Response implements ResponseInterface, StatusCodeInterface
 
     /** {@inheritdoc} */
     public function getBody()
+    {
+    }
+
+    /** {@inheritdoc} */
+    public function setBody($body)
     {
     }
 
