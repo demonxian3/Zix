@@ -1,7 +1,7 @@
 <?php
 namespace Khazix\Http;
 
-use Khazix\Utils;
+use Khazix\Tools\Utils;
 
 /*
  * @params ($url,$data,$encode,$header,$ssl)
@@ -18,20 +18,43 @@ use Khazix\Utils;
  */
 class Curl
 {
+    /*int http code*/
+    private $code = 0;
 
-    public function __construct($timeout = 5, $certs=[])
+    /*@int error code*/
+    private $errorCode = 0;
+
+    /*@string error string */
+    private $errorMsg = 'No Error';
+
+    /*@var curl execute result */
+    public $result;
+
+    /*@int curl wait timeout(second) */
+    private $timeout;
+
+    /*@array certs for ssl */
+    private $certs;
+
+    /*@array curl options*/
+    private $options = array();
+
+    /*@array custom curl options */
+    private $customOpts = array();
+
+    /*array curl headers */
+    private $headers = array();
+
+    /*array custom curl headers */
+    private $customHdrs = array();
+
+    /*array Use SSL or not */
+    private $isSecurity = false;
+
+    public function __construct(int $timeout = 5,array $certs=[])
     {
-        $this->timeout = $timeout;
-        $this->options = [];
-        $this->headers = [];
         $this->certs = $certs;
-        $this->customOpts = [];
-        $this->customHdrs = [];
-
-        $this->code = 0;
-        $this->error = [];
-        $this->result = [];
-        $this->ssl = false;
+        $this->timeout = $timeout;
     }
 
     public function __call($method, $arguments)
@@ -50,7 +73,7 @@ class Curl
         $data = $arguments[1] ?? '';
         $encode = $arguments[2] ?? '';
         $headers = $arguments[3] ?? [];
-        $ssl = $arguments[4] ?? false;
+        $isSecurity = $arguments[4] ?? false;
 
         if ($data){
             if ($method == 'GET' || $method == 'DELETE'){
@@ -76,7 +99,7 @@ class Curl
         $this->options[CURLOPT_SSL_VERIFYPEER] = false;
         $this->options[CURLOPT_SSL_VERIFYHOST] = 0;
 
-        if ($ssl){
+        if ($isSecurity){
             $this->options[CURLOPT_SSL_VERIFYPEER] = true;
             $this->options[CURLOPT_SSL_VERIFYHOST] = 0;
             $this->options[CURLOPT_CAINFO] = $this->certs['ca'];
@@ -85,7 +108,7 @@ class Curl
         }
 
         if ($this->customOpts) $this->options = array_merge($this->customOpts, $this->options);
-        $this->exec();
+        return $this->exec();
     }
 
     public function xml($data)
@@ -139,13 +162,14 @@ class Curl
 
         $this->code = curl_getinfo($con, CURLINFO_HTTP_CODE);
 
-        $this->error = false;
         if (curl_errno($con)){
-            $this->error = [ 'code'=>curl_errno($con), 'msg'=>curl_error($con) ];
+            $this->errorCode = curl_errno($con);
+            $this->errorMsg = curl_errno($con);
         }
+        curl_close($con);
 
         $this->result = json_decode($res,1) ?? $res;
-        curl_close($con);
+        return $this->result;
     }
 
     public function setCert($ca, $cert, $key) 
@@ -163,6 +187,26 @@ class Curl
     public function setHeader(array $headers)
     {
         $this->customHdrs = $headers;
+    }
+
+    public function setTimeout(int $second)
+    {
+        $this->timeout = $second;
+    }
+
+    public function getErrorCode(): int
+    {
+        return $this->errorCode;
+    }
+
+    public function getErrorMsg(): string
+    {
+        return $this->errorMsg;
+    }
+
+    public function getHttpCode(): int
+    {
+        return $this->code;
     }
 
 }
