@@ -1,8 +1,7 @@
 class Utils {
 
-    static init()
-    {
-        this.host = "http://example.cn";
+    static setHost(host) {
+        this.host = host;
     }
 
     static parse(reply){
@@ -94,6 +93,7 @@ class Utils {
         return true;
     }
 
+    //时间错转日期
     static timeToDate(time) {
         return new Date(parseInt(time) * 1000).toLocaleString().replace(/:\d{1,2}$/,' ');
     }

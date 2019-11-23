@@ -3,9 +3,21 @@ return [
 
     'curl' => [
         'dynamic' => false,
-        'class'   => '\\Khazix\\Curl',
+        'class'   => '\\Khazix\\Http\\Curl',
         'extend'  => false,
         'params'  => [ '@timeout', '@certs' ],
+    ],
+
+    'request' => [
+        'dynamic' => false,
+        'class'   => '\\Khazix\\Http\\Request',
+        'params'  => [],
+    ],
+
+    'response' => [
+        'dynamic' => false,
+        'class'   => '\\Khazix\\Http\\Response',
+        'params'  => [],
     ],
 
     'mysql' => [
@@ -37,7 +49,7 @@ return [
 
     'wxaccount' => [
         'dynamic' => false,
-        'class'   => '\\Khazix\\Wxaccount',
+        'class'   => '\\Khazix\\Sdk\\Wxaccount',
         'params'  => [ '@token', '@appid', '@appsecret' ],
         'extend'  => function($obj, $di) {
             $obj->setContainer($di);
@@ -47,7 +59,7 @@ return [
 
     'sms' => [
         'dynamic' => false,
-        'class'   => '\\Khazix\\Sms',
+        'class'   => '\\Khazix\\Sdk\\AliSms',
         'params'  => ['@appid', '@appkey', '@tplid'],
         'extend'  => function($obj, $di) {
             $obj->setContainer($di);

@@ -1,21 +1,27 @@
 <?php
-namespace Module\Wxaccount\Controller;
+namespace Wxaccount\Controller;
 
-use Khazix\Request;
-use Common\BaseController;
+use Common\ResponseTrait;
 
-class Index extends BaseController
+class Index 
 {
+
+    use ResponseTrait;
+
     public function __construct(){
-        var_dump($this->_di);exit;
-        $this->wx = $this->_di['wxaccount'];
+        global $_DI;
+        $this->_di = $_DI;
+        $config = $this->_di['config'];
+        $config->set('logger_handler', 'filepath', DATA_DIR .DS. 'log' .DS. 'wxaccount_index.log');
+        $this->wxaccount = $this->_di['wxaccount'];
         $this->logger = $this->_di['logger'];
+        $this->request = $this->_di['request'];
     }
 
     //入口
     public function main(){
         try{
-            $data = Request::getQuery();
+            $data = $this->request->getQuery();
             $echostr = $data['echostr'] ?? '';
 
             //接口配置校验
@@ -25,7 +31,7 @@ class Index extends BaseController
                 $signature = $data['signature'];
                 $timestamp = $data['timestamp'];
 
-                $res = $this->wx->check($nonce, $timestamp, $signature);
+                $res = $this->wxaccount->check($nonce, $timestamp, $signature);
                 if(!$res){
                     echo 'error';
                 }
@@ -35,7 +41,7 @@ class Index extends BaseController
 
             //监听客户端消息
             $this->logger->info('begin listen');
-            $this->recvData = $this->wx->listen();
+            $this->recvData = $this->wxaccount->listen();
             $msgType = $this->recvData['MsgType'];
             $this->selectType($msgType);
             
@@ -46,7 +52,7 @@ class Index extends BaseController
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ];
-            Log::dump($err, 'error');
+            $this->logger->error($err);
         }
     }
 
@@ -83,23 +89,23 @@ class Index extends BaseController
     //消息处理句柄
     public function textHandle(){
         $content = $this->recvData['Content'];
-        $this->wx->sendText($content);
+        $this->wxaccount->sendText($content);
     }
     public function voiceHandle(){
         $mediaId = $this->recvData['MediaId'];
-        $this->wx->sendVoice($mediaId);
+        $this->wxaccount->sendVoice($mediaId);
     }
     public function imageHandle(){
         $mediaId = $this->recvData['MediaId'];
-        $this->wx->sendImage($mediaId);
+        $this->wxaccount->sendImage($mediaId);
     }
     public function videoHandle(){
         $mediaId = $this->recvData['MediaId'];
-        $this->wx->sendVideo($mediaId);
+        $this->wxaccount->sendVideo($mediaId);
     }
     public function shortVideoHandle(){
         $mediaId = $this->recvData['MediaId'];
-        $this->wx->sendVideo($mediaId);
+        $this->wxaccount->sendVideo($mediaId);
     }
     public function locationHandle(){
         $recvData = $this->recvData;
@@ -114,7 +120,7 @@ class Index extends BaseController
         $str .= "比例: $s" .CR;
         $str .= "信息: $l" .CR;
 
-        $this->wx->sendText($str);
+        $this->wxaccount->sendText($str);
     }
     public function linkHandle(){
         $articles = [];
@@ -124,16 +130,45 @@ class Index extends BaseController
             'PicUrl' => 'http://www.baidu.com',
             'Url' => 'http://www.baidu.com',
         ];
-        $this->wx->sendNews($articles);
+        $this->wxaccount->sendNews($articles);
     }
 
     public function eventHandle(){
-    }
+        $openId = $this->recvData['FromUserName'];
+        $event = strtolower($this->recvData['Event']);
+        $eventKey = $this->recvData['EventKey'];
 
-    public function uploadMedia() {
-        $tmpname = Request::getFileTmpName();
-        $filename = Request::getFileName();
-        $res = Request::saveFile($tmpname, $filename);
-        var_dump($res);
+    
+        switch ($event) {
+            case 'subscribe':
+                $this->wxaccount->sendText("没什么好说，但总的说点什么，不然对于从忙忙人海中寻到这的您来说，显得不那么礼貌。\n\n这归属深信师兄团队运营，来了皆是朋友，校内大小忙您尽管开口。我们将竭尽所能。\n\n【PS】有想法的小伙伴可加入师兄团队"); break;
+
+            case 'click':
+                switch ($eventKey) {
+                    case 'info':
+                        $this->logger->info('openId', $openId);
+                        $userInfo = $this->wxaccount->getUserInfo($openId);
+                        $str  = '昵称: '. $userInfo['nickname'] .CR;
+                        $str .= '性别: '. ($userInfo['sex'] == 1 ? '男' : '女') .CR;
+                        $str .= '住址: '. $userInfo['province']. $userInfo['city'] .CR ;
+                        $str .= '头像: '. $userInfo['headimgurl'] .CR ;
+                        $str .= '备注: '. $userInfo['remark'] .CR ;
+                        $str .= '订阅方式: '. $userInfo['subscribe_scene'] .CR ;
+
+                        $this->wxaccount->sendText($str);
+                        break;
+
+                    case 'news':
+                        $url = $wx->getAuthCodeUrl();
+                        $this->wxaccount->sendText('开发中...');
+                        break;
+                }
+
+                break;
+
+            default:
+                # code...
+                break;
+        }
     }
 }

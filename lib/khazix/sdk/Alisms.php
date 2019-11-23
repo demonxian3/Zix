@@ -10,7 +10,7 @@ namespace Khazix\Sdk;
  *
  */
 
-class Sms
+class Alisms
 {
     /** 访问密钥 ID。AccessKey 用于调用 API。*/
     private $accessKeyId;

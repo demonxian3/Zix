@@ -44,7 +44,7 @@ class ConfigLoader
         } else if ($config === 'service') {
             return $this->service;
         } else {
-            return $this->setting[$config];
+            return $this->setting[$config] ?? [];
         }
     }
 
