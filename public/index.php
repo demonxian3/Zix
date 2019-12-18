@@ -1,5 +1,4 @@
 <?php
-
 ini_set('display_errors', true);
 header("Content-Type: text/html;charset=utf-8");
 ini_set("date.timezone", "Asia/Shanghai");
@@ -16,8 +15,6 @@ define('CORE_DIR', APP_DIR.DS.'core');
 define('CONFIG_DIR', APP_DIR.DS.'config');
 
 require_once(CORE_DIR.DS.'Bootstrap.php');
-
 $bootstrap = new \Core\Bootstrap;
-
 $bootstrap->run();
 
