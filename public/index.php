@@ -2,6 +2,7 @@
 
 ini_set('display_errors', true);
 header("Content-Type: text/html;charset=utf-8");
+ini_set("date.timezone", "Asia/Shanghai");
 
 define('CR', PHP_EOL);
 define('BR', "<br>");

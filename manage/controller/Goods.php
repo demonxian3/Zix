@@ -16,10 +16,7 @@ class Goods
 
     public function entrance()
     {
-        $rep = new Request();
-        $url = $rep->getUrl();
-        $url = new Url($url);
-        var_dump($rep->detectLanguage(['zh', 'zh-cN', 'jp']));
+        echo date('Y-m-d H:i:s');
     }
 }
 

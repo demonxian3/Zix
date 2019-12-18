@@ -11,7 +11,7 @@ if (!function_exists('is_assoc')){
 class Utils
 {
 
-    public function gbk2utf8($str){
+    public static function gbk2utf8($str){
         $charset = mb_detect_encoding($str, array('UTF-8', 'GBK', 'GB2312'));
         $charset = strtolower($charset);
         if ('cp936' == $charset) {
@@ -23,7 +23,7 @@ class Utils
         return $str;
     }
 
-    public function readCsvFile($filename, $titleMap, $filterList=[], $noEmptyList=[]){
+    public static function readCsvFile($filename, $titleMap, $filterList=[], $noEmptyList=[]){
         $result = [];
         $title = [];
         $isTitle = true;
