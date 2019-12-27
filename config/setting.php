@@ -5,7 +5,7 @@ return [
     'mysql' => [
         'host'     => 'localhost',
         'username' => 'root',
-        'password' => 'root',
+        'password' => '26678742a',
         'database' => 'bds',
     ],
 

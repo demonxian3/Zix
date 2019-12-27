@@ -39,8 +39,8 @@ class Bootstrap
             $class = strtr($class, '\\', DS);
             $filename = basename($class);
             $filedir  = strtolower(dirname($class));
-            $filepath = APP_DIR .DS. $filedir .DS. $filename . EXT;
-            $libpath  = LIB_DIR .DS. $filedir .DS. $filename . EXT;
+            $filepath = APP_DIR . DS . $filedir . DS . $filename . EXT;
+            $libpath = LIB_DIR.DS.$filedir.DS.$filename.EXT;
 
             if (file_exists($filepath)){
                 require_once($filepath);
@@ -76,25 +76,27 @@ class Bootstrap
     public function initRouter()
     {
         $routings = $this->configLoader->get('routing');
-
         foreach ($routings as $route){
             $method = $route[0];
             $path = $route[1];
             $action = $route[2];
 
-            //remove (:num) (:any) (:all) from class path
-            $classpath = preg_replace('#/\(.*?\)#', '', $route[1]);
+            $parts = explode('/', $path);
+            array_shift($parts);
 
-            $controller = ucfirst(basename($path));
-            $module = ucfirst(ltrim(dirname($path), '/'));
+            if (count($parts) < 2) {
+                throw new Exception("Routing Parse Error: $path");
+            } 
+
+            $module = ucfirst($parts[0]);
+            $controller = ucfirst($parts[1]);
+            if (count($parts) === 3 && $parts[2][0] != '(') {
+                $action = $parts[2];
+            }
+         
             $action = "$module\\Controller\\$controller@$action";
-
             Macaw::$method($path, $action);
         }
     }
 
 }
-
-
-
-

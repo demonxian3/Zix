@@ -29,7 +29,9 @@ class Goods
     		->innerJoin($trainee, ['tid'=>'id'], ['id'=>'trainee_id'])
     		->innerJoin($coach, ['cid'=>'id'], ['id' => 'coach_id', 'truename'=>'coach_truename'])
     		->leftJoin($appointment, ['trainee.openid'=>'openid'])
-    		->show([]);
+            ->show([]);
+
+        var_dump($data);exit;
     }
 }
 
