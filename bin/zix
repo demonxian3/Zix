@@ -1,0 +1,121 @@
+#!/bin/bash
+
+if [[ $OS == 'Windows_NT' ]];then
+    DS="\\"
+else
+    DS='/'
+fi
+
+BIN_DIR="$ZIX_HOME${DS}bin"
+TEMPLATE_DIR="$BIN_DIR${DS}template"
+MODEL_DIR="$TEMPLATE_DIR${DS}model"
+CONFIG_DIR="$TEMPLATE_DIR${DS}config"
+MODULE_DIR="$TEMPLATE_DIR${DS}module"
+WXACCOUNT_DIR="$TEMPLATE_DIR${DS}wxaccount"
+SCRIPT_DIR="$TEMPLATE_DIR${DS}script"
+
+function createModule() {
+    dir=${1,,}
+    cp -r $MODULE_DIR ./$dir
+    find ./$dir/ -type f -print0 | xargs -0 sed -i "s/Module/${1^}/g"
+}
+
+function createModel() {
+    if [[ ! -d 'model' ]]; then
+        echo 'please run it in project root path';
+        exit;
+    fi
+
+    table=${1,,}
+    cp -r $MODEL_DIR/Table.php model/${table^}.php
+    sed -i "s/Table/${table^}/g" model/${table^}.php
+    sed -i "s/table/${table,,}/g" model/${table^}.php
+}
+
+function createWxaccount() {
+    if [[ ! -d 'wxaccount' ]]; then
+        cp -r $WXACCOUNT_DIR ./
+    fi
+}
+
+function createScript() {
+    if [[ ! -d 'script' ]]; then
+        cp -r $SCRIPT_DIR ./
+    else
+        echo 'already has script directory';
+    fi
+}
+
+function init() {
+    if [[ ! -d './config' ]]; then
+        cp -r $CONFIG_DIR ./
+    fi
+
+    if [[ ! -d './model' ]]; then
+        cp -r $MODEL_DIR ./
+    fi
+
+    if [[ ! -d './module' ]]; then
+        createModule "module"
+    fi
+
+    if [[ ! -d '.git' ]]; then
+        git init .
+        cp $TEMPLATE_DIR$DS".gitignore" .
+    fi
+
+    if [[ ! -e '.htaccess' ]]; then
+        cp $TEMPLATE_DIR$DS".htaccess" .
+    fi
+
+    if [[ ! -d './public' ]]; then
+        cp -r $TEMPLATE_DIR$DS"public" .
+    fi
+}
+
+
+
+case $1 in 
+    init)
+        init;
+    ;;
+    model)
+        createModel $2;
+    ;;
+    module)
+        createModule $2;
+    ;;
+    wxaccount)
+        createWxaccount;
+    ;;
+    script)
+        createScript;
+    ;;
+    version|-v|--version)
+        echo v1.5;
+    ;;
+    *)
+cat << EOF
+usage: zix [options] [object]
+
+[options]
+    init        Create an empty porject
+    module      Create a module 
+    model       Create a model
+    wxaccount   Create wxaccount
+    script      Create script
+    version     View version
+
+[example]
+    zix init
+    zix module test
+    zix model users
+EOF
+    ;;
+esac
+
+
+
+
+#cp -r $TEMPLATE_DIR/* .
+

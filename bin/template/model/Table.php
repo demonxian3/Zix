@@ -3,13 +3,13 @@ namespace Model;
 
 use Common\BaseMysqlModel;
 
-class Coach extends BaseMysqlModel{
+class Table extends BaseMysqlModel{
 
- 	public $table = 'coach';
- 	public $columns = ['id', 'openid', 'truename', 'phone'];
+ 	public $table = 'table';
+ 	public $columns = ['id', 'username'];
 
  	function __construct() {
  		parent::__construct($this->table, $this->columns, $this->table);
  	}
 
-}
+} 

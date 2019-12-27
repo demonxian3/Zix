@@ -11,15 +11,10 @@ class ConfigLoader
 
     public function __construct($env="")
     {
+        $env = ($env == 'development') ? 'development' : '';
+        $this->settingPath = CONFIG_DIR .DS. $env .DS. 'setting.php';
         $this->routingPath = CONFIG_DIR .DS. 'routing.php';
         $this->servicePath = CONFIG_DIR .DS. 'service.php';
-
-        if ($env === 'development') {
-            $this->settingPath = CONFIG_DIR .DS. 'development/setting.php';
-        } else {
-            $this->settingPath = CONFIG_DIR .DS. 'setting.php';
-        }
-
         $this->load();
     }
 

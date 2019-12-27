@@ -39,7 +39,14 @@ class Bootstrap
             $class = strtr($class, '\\', DS);
             $filename = basename($class);
             $filedir  = strtolower(dirname($class));
-            $filepath = APP_DIR . DS . $filedir . DS . $filename . EXT;
+
+            //若目录名为core lib common则以zix为目录，否则以app为目录
+            if (in_array($filedir, ['core', 'lib', 'common'])) {
+                $filepath = ZIX_DIR . DS . $filedir . DS . $filename . EXT;
+            } else {
+                $filepath = APP_DIR . DS . $filedir . DS . $filename . EXT;
+            }
+            
             $libpath = LIB_DIR.DS.$filedir.DS.$filename.EXT;
 
             if (file_exists($filepath)){
@@ -56,8 +63,7 @@ class Bootstrap
     //配置加载器
     public function initConfigLoader()
     {
-        $env = getenv('APP_ENV');
-
+        $env = getenv('ZIX_ENV');
         $this->configLoader = new ConfigLoader($env);
     }
 
