@@ -44,7 +44,15 @@ class Request implements  IRequest
         $this->method = $this->gainMethod();
         $this->headers = $this->gainHeaders();
         $this->rawBody = $this->gainRawBody();
-        parse_str($this->rawBody, $this->body);
+
+        if ($this->isMethod('get')) {
+            $this->body = $_GET;
+        } else if ($this->isMethod('post')) {
+            $this->body = $_POST;
+        } else {
+            parse_str($this->rawBody, $this->body);
+        }
+
         list($this->scheme, $this->host, $this->port) = $this->gainServer();
         list($this->remoteAddr, $this->remoteHost) = $this->gainClient();
     }
@@ -123,7 +131,6 @@ class Request implements  IRequest
         if ($key) {
             return $_GET[$key];
         }
-
         return $_GET;
     }
 
@@ -252,18 +259,30 @@ class Request implements  IRequest
         return $this->body;
     }
 
-    public function checkRequest(string ...$keys): bool
+    public function check(string ...$keys): bool
     {
         foreach ($keys as $key) {
             if (!isset($this->body[$key])) {
                 return false;
             }
         }
-
         return true;
     }
 
-    public function extractRequest(string ...$keys): array
+    public function require(string ...$keys): array
+    {
+        $request = array();
+        foreach ($keys as $key) {
+            if (isset($this->body[$key])) {
+                $request[$key] = $this->body[$key];
+            } else {
+                return [];
+            }
+        }
+        return $request;
+    }
+
+    public function extract(string ...$keys): array
     {
         $request = array();
         foreach ($keys as $key) {
@@ -271,7 +290,17 @@ class Request implements  IRequest
                 $request[$key] = $this->body[$key];
             }
         }
+        return $request;
+    }
 
+    public function collect(string ...$keys): array
+    {
+        $request = array();
+        foreach ($keys as $key) {
+            if (!empty($this->body[$key])) {
+                $request[$key] = $this->body[$key];
+            }
+        }
         return $request;
     }
 
