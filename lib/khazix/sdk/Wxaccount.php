@@ -1,6 +1,6 @@
 <?php
 
-namespace Khazix;
+namespace Khazix\Sdk;
 
 class Wxaccount
 {

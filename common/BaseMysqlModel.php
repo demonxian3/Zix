@@ -107,6 +107,15 @@ class BaseMysqlModel {
         return $count;
     }
 
+    public function change(array $data, array $where): int
+    {
+        if ($this->has($where)) {
+            return $this->update($data, $where);
+        } else {
+            return $this->insert($data + $where);
+        }
+    }
+
     public function delete(array $where): int
     {
         if ($where) $this->setWhere($where);

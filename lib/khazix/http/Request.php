@@ -129,7 +129,7 @@ class Request implements  IRequest
     public function getQuery(string $key = null)
     {
         if ($key) {
-            return $_GET[$key];
+            return $_GET[$key] ?? null;
         }
         return $_GET;
     }
@@ -137,7 +137,7 @@ class Request implements  IRequest
     public function getPost(string $key = null)
     {
         if ($key) {
-            return $_POST[$key];
+            return $_POST[$key] ?? null;
         }
         return $_POST;
     }
@@ -178,7 +178,7 @@ class Request implements  IRequest
 
     public function getCookie(string $key)
     {
-        return $_COOKIE[$key];
+        return $_COOKIE[$key] ?? null;
     }
 
     public function getCookies(): array
@@ -188,7 +188,7 @@ class Request implements  IRequest
 
     public function getSession(string $key)
     {
-        return $_SESSION[$key];
+        return $_SESSION[$key] ?? null;
     }
 
     public function getSessions(): array

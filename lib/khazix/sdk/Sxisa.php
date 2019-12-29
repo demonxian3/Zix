@@ -27,15 +27,16 @@ class Sxisa
         global $_DI;
 
         $this->curl = $_DI['curl'];
-        $this->redis = $_DI['redis'];
         $this->logger = $_DI['logger'];
-
         $this->logger->setChannel('sxisa sdk');
-        $config = $_DI['config']->get('sxisa');
 
+        //计算当前的年份和学期: 6月前是去年的第二学期
+        $year = date('Y');
+        $month = date('m');
+
+        $this->term = $month > 6 ? 1 : 2;
+        $this->year = $month > 6 ? $year :  $year - 1;
         $this->url = 'https://api.sxisa.com/nedu/timetable/';
-        $this->term = $config['term'];
-        $this->year = $config['year'];
     }
 
     /**
@@ -44,36 +45,22 @@ class Sxisa
      */
     public function searchCourse($number): array
     {
-
-        $redisKey = 'course_table_' . $number;
-
-
-        if ($courses = $this->redis->get($redisKey)) {
-            return json_decode($courses, true);
-        }
-
         $data = [
             'number' => $number,
             'term' => $this->term,
             'year' => $this->year,
         ];
 
-        $this->curl->post($this->url, $data, 'json');
-        var_dump($this->curl->result);
-
-        if ($this->curl->result) {
-
-            $this->logger->print(__METHOD__, $this->curl->result);
-
-            $matrix = $this->processCourse($this->curl->result['data']);
-
-            $this->redis->set($redisKey, json_encode($matrix));
-
+        //try three times;
+        $result = $this->curl->post($this->url, $data, 'json');
+        if ($result) {
+            $matrix = $this->processCourse($result['data']);
             return $matrix;
+        } else {
+            $this->logger->print(__METHOD__, $this->curl->getErrorMsg());
         }
 
         return [];
-
     }
 
     private function processCourse(?array $courses): array
@@ -102,13 +89,13 @@ class Sxisa
 
         foreach ($courses as $course) {
             $name = $course['name'];
-            $day = $dayMap[$course['sections'][0]['day']];
-            $sections = $course['sections'][0]['sections'];
-
-            foreach ($sections as $section) {
-                $courseMatrix[$day][$section-1] = $name;
+            @$day = $dayMap[$course['sections'][0]['day']];
+            @$sections = $course['sections'][0]['sections'];
+            if (is_array($sections)){
+                foreach ($sections as $section) {
+                    $courseMatrix[$day][$section-1] = $name;
+                }
             }
-
         }
 
         return $courseMatrix;
