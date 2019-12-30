@@ -76,6 +76,10 @@ function init() {
     if [[ ! -d './data' ]]; then
         cp -r $DATA_DIR .
     fi
+
+    if [[ ! -f 'README.md' ]]; then
+        cp $TEMPLATE_DIR$DS"README.md" .
+    fi
 }
 
 
