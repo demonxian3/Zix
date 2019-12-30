@@ -90,16 +90,13 @@ class Bootstrap
             $parts = explode('/', $path);
             array_shift($parts);
 
-            if (count($parts) < 2) {
-                throw new Exception("Routing Parse Error: $path");
-            } 
+            if ($action[0] == '/' ) {
+                $path .= $action;
+                $action = substr($action, 1);
+            }
 
             $module = ucfirst($parts[0]);
             $controller = ucfirst($parts[1]);
-            if (count($parts) === 3 && $parts[2][0] != '(') {
-                $action = $parts[2];
-            }
-         
             $action = "$module\\Controller\\$controller@$action";
             Macaw::$method($path, $action);
         }

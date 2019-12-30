@@ -253,7 +253,7 @@ class Request implements  IRequest
     public function getRequest(string $key = null)
     {
         if ($key && $this->body) {
-            return $this->body[$key];
+            return $this->body[$key] ?? null;
         }
 
         return $this->body;
