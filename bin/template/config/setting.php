@@ -1,12 +1,10 @@
 <?php
 
 return [
-    /** Lib */
+    //TOCHANGE
     'app' => [
         'baseUrl' => 'http://www.your_domain.com',
     ],
-
-
 
     'curl' => [
         'timeout' => 3,
@@ -17,7 +15,7 @@ return [
         ]
     ],
 
-    /** Model */
+    //TOCHANGE
     'mysql' => [
         'host'     => 'localhost',
         'username' => 'root',
@@ -30,7 +28,7 @@ return [
         'port' => '6379',
     ],
 
-    /** Wechat */
+    //TOCHANGE
     'wxaccount' => [
         'token' => 'your_token',
         'appid' => 'your_appid',
@@ -57,7 +55,6 @@ return [
         ]
     ],
 
-    /** SDK */
     'sms_tencent' => [
         'appid' => 'your_appid',
         'appkey' => 'your_secret',
@@ -71,7 +68,6 @@ return [
         'accessSecret' => 'your_access_secret',
     ],
 
-    /** Logger */
     'logger' => [
         'channel' => 'zix',
     ],

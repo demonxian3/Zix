@@ -13,6 +13,7 @@ CONFIG_DIR="$TEMPLATE_DIR${DS}config"
 MODULE_DIR="$TEMPLATE_DIR${DS}module"
 WXACCOUNT_DIR="$TEMPLATE_DIR${DS}wxaccount"
 SCRIPT_DIR="$TEMPLATE_DIR${DS}script"
+DATA_DIR="$TEMPLATE_DIR${DS}data"
 
 function createModule() {
     dir=${1,,}
@@ -70,6 +71,10 @@ function init() {
 
     if [[ ! -d './public' ]]; then
         cp -r $TEMPLATE_DIR$DS"public" .
+    fi
+
+    if [[ ! -d './data' ]]; then
+        cp -r $DATA_DIR .
     fi
 }
 
