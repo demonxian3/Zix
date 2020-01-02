@@ -1,10 +1,17 @@
 # Zix
 
-//TOCHANGE
+//TOCHANGE 
+
+|简述|描述|
+|--|--|
+|作者|khazix
+|框架|zix+vue
+|版本|1.0
+|日期|2020-01-02
 
 ### INSTALL
 
-- Apache
+##### Apache
 
 edit vhost.conf
 
@@ -28,7 +35,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ public/?$1 [QSA,L]
 ```
 
-- Nginx
+##### Nginx
 
 edit vhost.conf
 

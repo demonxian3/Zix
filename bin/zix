@@ -27,10 +27,17 @@ function createModel() {
         exit;
     fi
 
-    table=${1,,}
-    cp -r $MODEL_DIR/Table.php model/${table^}.php
-    sed -i "s/Table/${table^}/g" model/${table^}.php
-    sed -i "s/table/${table,,}/g" model/${table^}.php
+    tableName=${1,,}
+    className=${tableName^}
+
+    if [[ $tableName =~ '_' ]]; then
+        parts=(${tableName/_/ });
+        className=${parts[0]^}${parts[1]^}
+    fi
+
+    cp -r $MODEL_DIR/Table.php model/${className}.php
+    sed -i "s/Table/${className}/g" model/${className}.php
+    sed -i "s/'table'/'${tableName}'/g" model/${className}.php
 }
 
 function createWxaccount() {
@@ -89,7 +96,9 @@ case $1 in
         init;
     ;;
     model)
-        createModel $2;
+        for i in $@; do 
+            createModel $i;
+        done
     ;;
     module)
         createModule $2;
@@ -101,7 +110,7 @@ case $1 in
         createScript;
     ;;
     version|-v|--version)
-        echo v1.5;
+        echo v1.6;
     ;;
     *)
 cat << EOF
