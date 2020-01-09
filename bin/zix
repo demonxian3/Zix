@@ -40,6 +40,19 @@ function createModel() {
     sed -i "s/'table'/'${tableName}'/g" model/${className}.php
 }
 
+function createContoller() {
+    if [[ ! -d 'controller' ]]; then
+        echo 'please run this in module path';
+        exit;
+    fi
+
+    controllerName=${1,,}
+    className=${controllerName^}
+
+    cp -r $MODULE_DIR/controller/Index.php controller/${className}.php
+    sed -i "s/Index/${className}/g" controller/${className}.php
+}
+
 function createWxaccount() {
     if [[ ! -d 'wxaccount' ]]; then
         cp -r $WXACCOUNT_DIR ./
@@ -103,6 +116,9 @@ case $1 in
     module)
         createModule $2;
     ;;
+    controller)
+        createContoller $2;
+    ;;
     wxaccount)
         createWxaccount;
     ;;
@@ -120,6 +136,7 @@ usage: zix [options] [object]
     init        Create an empty porject
     module      Create a module 
     model       Create a model
+    controller  Create a controller
     wxaccount   Create wxaccount
     script      Create script
     version     View version
