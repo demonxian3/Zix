@@ -22,8 +22,6 @@ define('DATA_DIR', APP_DIR.DS.'data');
 define('CONFIG_DIR', APP_DIR.DS.'config');
 require_once(CORE_DIR.DS.'Bootstrap.php');
 
-echo '<pre>';
-
 $bootstrap = new \Core\Bootstrap;
 $bootstrap->run();
 

@@ -37,7 +37,9 @@ class BaseMysqlModel {
     public function setColumn(array $columns): self
     {
         foreach ($columns as $idx => $column) {
-            $columns[$idx] = $this->table .'.'. $column;
+            if (is_string($column) && strpos($column, '.') === false) {
+                $columns[$idx] = $this->table .'.'. $column;
+            }
         }
         $this->columns = $columns;
         return $this;
@@ -55,6 +57,12 @@ class BaseMysqlModel {
         return $this;
     }
 
+    public function paginate($page=1, $size=10):self
+    {
+        $this->pagination = [($page-1)*$size, $size];
+        return $this;
+    }
+
     public function debug(bool $debug = true): self
     {
         $this->debug = $debug;
@@ -65,6 +73,10 @@ class BaseMysqlModel {
     {
         if ($where) $this->setWhere($where);
         if ($columns) $this->setColumn($columns);
+        if ($this->pagination) {
+            $this->conditions['LIMIT'] = $this->pagination;
+            $this->pagination = [];
+        }
 
         if ($this->debug) {
             $this->mysql->debug()->select($this->table, $this->columns, $this->conditions);
@@ -209,8 +221,13 @@ class BaseMysqlModel {
             $this->mysql->debug()->select($this->table, $this->joinQueue, $columns, $where);
             return [];
         }
+
+        if ($this->pagination) {
+            $this->conditions['LIMIT'] = $this->pagination;
+            $this->pagination = [];
+        }
         
-        $data = $this->mysql->select($this->table, $this->joinQueue, $columns, $where);
+        $data = $this->mysql->select($this->table, $this->joinQueue, $columns, $this->conditions);
         if (!$data) $this->recordError(__METHOD__);
         return $data;
     }
