@@ -47,6 +47,12 @@ function createScript() {
     fi
 }
 
+function createView() {
+    if [[ ! -d './view' ]]; then
+        cp -r $MODULE_DIR$DS"view" .
+    fi
+}
+
 function init() {
     if [[ ! -d './config' ]]; then
         cp -r $CONFIG_DIR ./
@@ -80,6 +86,8 @@ function init() {
     if [[ ! -f 'README.md' ]]; then
         cp $TEMPLATE_DIR$DS"README.md" .
     fi
+
+    
 }
 
 
@@ -100,6 +108,9 @@ case $1 in
     script)
         createScript;
     ;;
+    view )
+        createView;
+    ;;
     version|-v|--version)
         echo v1.5;
     ;;
@@ -114,6 +125,7 @@ usage: zix [options] [object]
     wxaccount   Create wxaccount
     script      Create script
     version     View version
+    view        Create a view 
 
 [example]
     zix init
