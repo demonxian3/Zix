@@ -5,9 +5,9 @@ module.exports = {
     entry: './src/main.js',
     output: {
         path: path.resolve(__dirname, './dist'),
-        // publicPath: '/dist/',
+        publicPath: '/dist/',
         //TOCHANGE
-        publicPath: '/module/view/v1/dist/',
+        // publicPath: '/module/view/v1/dist/',
         filename: 'build.js'
     },
     module: {

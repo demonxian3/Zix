@@ -8,6 +8,7 @@ class BaseMysqlModel {
     private $debug = false;
     private $joinQueue = [];
     private $joinColumns = [];
+    private $pagination = [];
 
     public function __construct(string $table, array $columns, string $channel = 'default')
     {
