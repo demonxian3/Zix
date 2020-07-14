@@ -46,7 +46,7 @@ class BaseMysqlModel {
         return $this;
     }
 
-    public function setChannel(string $channel)
+    public function setChannel(string $channel): self
     {
         $this->logger->setChannel($channel);
         return $this;
@@ -57,6 +57,13 @@ class BaseMysqlModel {
         if ($conditions) $this->conditions = $conditions;
         return $this;
     }
+
+    public function addWhere(array $conditions = []): self
+    {
+        if ($conditions) $this->conditions = $this->conditions  + $conditions;
+        return $this;
+    }
+
 
     public function paginate($page=1, $size=10):self
     {
@@ -89,6 +96,7 @@ class BaseMysqlModel {
         if (!$data) $this->recordError(__METHOD__);
         return $data;
     }
+
 
     public function insert(array $data): int
     {
@@ -150,9 +158,15 @@ class BaseMysqlModel {
         return $this->select() ? true : false;
     }
 
+
     public function lastSql(): string
     {
         return $this->mysql->last();
+    }
+
+    public function lastId(): int
+    {
+        return $this->mysql->id();
     }
 
     public function log(): array
@@ -198,7 +212,11 @@ class BaseMysqlModel {
 
         if ($alias) {
             foreach ($alias as $key => $value) {
-                $fullname = $table .'.'. $key;
+                if (!strpos($key, '.')){
+                    $fullname = $table .'.'. $key;
+                } else {
+                    $fullname = $key;
+                }
                 foreach ($columns as $idx => $column) {
                     if ($fullname === $column) {
                         $columns[$idx] .= (' ('. $value .')');
@@ -229,6 +247,22 @@ class BaseMysqlModel {
         }
         
         $data = $this->mysql->select($this->table, $this->joinQueue, $columns, $this->conditions);
+        if (!$data) $this->recordError(__METHOD__);
+        return $data;
+    }
+
+    
+    public function count( array $where = []): int
+    {
+        if ($where) $this->setWhere($where);
+        $columns = array_merge($this->columns, $this->joinColumns);
+
+        if ($this->debug) {
+            $this->mysql->debug()->count($this->table, $this->joinQueue, $columns, $where);
+            return [];
+        }
+
+        $data = $this->mysql->count($this->table, $this->joinQueue, $columns, $this->conditions);
         if (!$data) $this->recordError(__METHOD__);
         return $data;
     }
