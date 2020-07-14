@@ -258,11 +258,22 @@ class BaseMysqlModel {
         $columns = array_merge($this->columns, $this->joinColumns);
 
         if ($this->debug) {
-            $this->mysql->debug()->count($this->table, $this->joinQueue, $columns, $where);
+            if ($this->joinQueue){
+                $this->mysql->debug()->count($this->table, $this->joinQueue, $columns, $where);
+                
+            } else {
+                $this->mysql->debug()->count($this->table, $this->conditions);
+            }
             return [];
         }
 
-        $data = $this->mysql->count($this->table, $this->joinQueue, $columns, $this->conditions);
+        if ($this->joinQueue){
+            $data = $this->mysql->count($this->table, $this->joinQueue, $columns, $this->conditions);
+            
+        }else{
+            $data = $this->mysql->count($this->table, $this->conditions);
+        }
+         
         if (!$data) $this->recordError(__METHOD__);
         return $data;
     }
