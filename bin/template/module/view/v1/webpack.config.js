@@ -1,14 +1,21 @@
 var path = require('path')
 var webpack = require('webpack')
+var publicPath = '';
+
+if (process.env === 'development') {
+    publicPath = '/dist/'
+} else {
+    publicPath = '/cms/view/v1/dist/'
+}
 
 module.exports = {
     entry: './src/main.js',
     output: {
         path: path.resolve(__dirname, './dist'),
-        publicPath: '/dist/',
-        //TOCHANGE
-        // publicPath: '/module/view/v1/dist/',
-        filename: 'build.js'
+        filename: 'build.js',
+        publicPath: publicPath
+        // publicPath: '/dist/',
+        // publicPath: '/cms/view/v1/dist/',
     },
     module: {
         rules: [{

@@ -6,8 +6,8 @@ import Configs from './config/config.js'
 import Routings from './config/routing.js'
 
 /** components */
-import Http from './assets/js/http.js'
-import Utils from './assets/js/utils.js'
+import Http from './lib/http.js'
+import Utils from './lib/utils.js'
 import BootstrapVue from 'bootstrap-vue'
 import VueRouter from 'vue-router'
 
@@ -20,7 +20,7 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-vue/dist/bootstrap-vue.min.css'
 
 /** init  */
-import './assets/js/index.js'
+import './lib/index.js'
 
 /** register */
 //TOCHANGE
