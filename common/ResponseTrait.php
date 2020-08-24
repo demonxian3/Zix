@@ -4,6 +4,13 @@ namespace Common;
 
 trait ResponseTrait
 {
+    static $ERRMAP = [
+        40101 => 'LoginFail',
+        40001 => 'MissingRequestParams',
+        'LoginFail'             =>  40101,
+        'MissingRequestParams'  =>  40001,
+    ];
+
     public function __construct()
     {
         global $_DI;
@@ -23,6 +30,28 @@ trait ResponseTrait
         }
         throw new \Exception('Possible problem: you are sending a HTTP header while already
             having some data in output buffer. Try start session earlier.');
+    }
+
+    public function replySuccess($data = [], string $msg = 'ok'): void
+    {
+        $this->reply(200, 'ok', $data);
+    }
+
+    public function replyError(string $key, string $msg = 'error'): void
+    {
+        if (is_numeric($key)) {
+            $data = [
+                'ret' => $key,
+                'msg' => self::$ERRMAP[$key],
+            ];
+        } else {
+            $data = [
+                'ret' => self::$ERRMAP[$key],
+                'msg' => $key,
+            ];
+        }
+
+        $this->reply(400, $msg, $data);
     }
 
     public function redirect(string $url): void
