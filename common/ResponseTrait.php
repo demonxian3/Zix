@@ -5,8 +5,10 @@ namespace Common;
 trait ResponseTrait
 {
     static $ERRMAP = [
+        40100 => 'InvalidSession',
         40101 => 'LoginFail',
         40001 => 'MissingRequestParams',
+        'InvalidSession'        =>  40100,
         'LoginFail'             =>  40101,
         'MissingRequestParams'  =>  40001,
     ];
@@ -39,19 +41,27 @@ trait ResponseTrait
 
     public function replyError(string $key, string $msg = 'error'): void
     {
-        if (is_numeric($key)) {
-            $data = [
-                'ret' => $key,
-                'msg' => self::$ERRMAP[$key],
-            ];
-        } else {
-            $data = [
-                'ret' => self::$ERRMAP[$key],
-                'msg' => $key,
-            ];
-        }
+        $err = $this->makeErrorInfo($key);
+        $this->reply(400, $msg, $err);
+    }
 
-        $this->reply(400, $msg, $data);
+    public function makeErrorInfo($key): array{
+        if (array_key_exists($key, self::$ERRMAP)){
+            if (is_numeric($key)) {
+                $data = [
+                    'ret' => $key,
+                    'msg' => self::$ERRMAP[$key],
+                ];
+            } else {
+                $data = [
+                    'ret' => self::$ERRMAP[$key],
+                    'msg' => $key,
+                ];
+            }
+        } else {
+            $data = ['ret'=>-1, 'msg'=>'ErrorNotFound'];
+        }
+        return $data;
     }
 
     public function redirect(string $url): void
