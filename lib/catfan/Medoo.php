@@ -1516,39 +1516,124 @@ class Medoo
 		return $this->exec('DELETE FROM ' . $this->tableQuote($table) . $this->whereClause($where, $map), $map);
 	}
 
-	public function replace($table, $columns, $where = null)
+	public function replace($table, $datas)
 	{
-		if (!is_array($columns) || empty($columns))
-		{
-			return false;
-		}
-
+		$fields = [];
 		$map = [];
 		$stack = [];
+		$columns = [];
 
-		foreach ($columns as $column => $replacements)
+		if (!isset($datas[ 0 ]))
 		{
-			if (is_array($replacements))
+			$datas = [$datas];
+		}
+
+		foreach ($datas as $data)
+		{
+			foreach ($data as $key => $value)
 			{
-				foreach ($replacements as $old => $new)
-				{
-					$map_key = $this->mapKey();
-
-					$stack[] = $this->columnQuote($column) . ' = REPLACE(' . $this->columnQuote($column) . ', ' . $map_key . 'a, ' . $map_key . 'b)';
-
-					$map[ $map_key . 'a' ] = [$old, PDO::PARAM_STR];
-					$map[ $map_key . 'b' ] = [$new, PDO::PARAM_STR];
-				}
+				$columns[] = $key;
 			}
 		}
 
-		if (!empty($stack))
+		$columns = array_unique($columns);
+
+		foreach ($datas as $data)
 		{
-			return $this->exec('UPDATE ' . $this->tableQuote($table) . ' SET ' . implode(', ', $stack) . $this->whereClause($where, $map), $map);
+			$values = [];
+
+			foreach ($columns as $key)
+			{
+				if ($raw = $this->buildRaw($data[ $key ], $map))
+				{
+					$values[] = $raw;
+					continue;
+				}
+
+				$map_key = $this->mapKey();
+
+				$values[] = $map_key;
+
+				if (!isset($data[ $key ]))
+				{
+					$map[ $map_key ] = [null, PDO::PARAM_NULL];
+				}
+				else
+				{
+					$value = $data[ $key ];
+
+					$type = gettype($value);
+
+					switch ($type)
+					{
+						case 'array':
+							$map[ $map_key ] = [
+								strpos($key, '[JSON]') === strlen($key) - 6 ?
+									json_encode($value) :
+									serialize($value),
+								PDO::PARAM_STR
+							];
+							break;
+
+						case 'object':
+							$value = serialize($value);
+
+						case 'NULL':
+						case 'resource':
+						case 'boolean':
+						case 'integer':
+						case 'double':
+						case 'string':
+							$map[ $map_key ] = $this->typeMap($value, $type);
+							break;
+					}
+				}
+			}
+
+			$stack[] = '(' . implode(', ', $values) . ')';
 		}
 
-		return false;
+		foreach ($columns as $key)
+		{
+			$fields[] = $this->columnQuote(preg_replace("/(\s*\[JSON\]$)/i", '', $key));
+		}
+
+		return $this->exec('REPLACE INTO ' . $this->tableQuote($table) . ' (' . implode(', ', $fields) . ') VALUES ' . implode(', ', $stack), $map);
 	}
+
+	// public function replace($table, $columns, $where = null)
+	// {
+	// 	if (!is_array($columns) || empty($columns))
+	// 	{
+	// 		return false;
+	// 	}
+
+	// 	$map = [];
+	// 	$stack = [];
+
+	// 	foreach ($columns as $column => $replacements)
+	// 	{
+	// 		if (is_array($replacements))
+	// 		{
+	// 			foreach ($replacements as $old => $new)
+	// 			{
+	// 				$map_key = $this->mapKey();
+
+	// 				$stack[] = $this->columnQuote($column) . ' = REPLACE(' . $this->columnQuote($column) . ', ' . $map_key . 'a, ' . $map_key . 'b)';
+
+	// 				$map[ $map_key . 'a' ] = [$old, PDO::PARAM_STR];
+	// 				$map[ $map_key . 'b' ] = [$new, PDO::PARAM_STR];
+	// 			}
+	// 		}
+	// 	}
+
+	// 	if (!empty($stack))
+	// 	{
+	// 		return $this->exec('UPDATE ' . $this->tableQuote($table) . ' SET ' . implode(', ', $stack) . $this->whereClause($where, $map), $map);
+	// 	}
+
+	// 	return false;
+	// }
 
 	public function get($table, $join = null, $columns = null, $where = null)
 	{

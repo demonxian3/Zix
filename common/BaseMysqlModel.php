@@ -112,6 +112,20 @@ class BaseMysqlModel {
         return $count;
     }
 
+    public function replace(array $data): int
+    {
+        if ($this->debug) {
+            $res = $this->mysql->debug()->replace($this->table, $data);
+            $this->debug = false;
+            return 0;
+        } 
+
+        $res = $this->mysql->replace($this->table, $data);
+        $count = $res->rowCount();
+        if (!$count) $this->recordError(__METHOD__);
+        return $count;
+    }
+
     public function update(array $data, array $where = []): int
     {
         if ($where) $this->setWhere($where);
