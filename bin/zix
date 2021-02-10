@@ -99,14 +99,13 @@ function init() {
         cp -r $TEMPLATE_DIR$DS"public" .
     fi
 
-    if [[ ! -d './data' ]]; then
-        cp -r $DATA_DIR .
-    fi
-
     if [[ ! -f 'README.md' ]]; then
         cp $TEMPLATE_DIR$DS"README.md" .
     fi
 
+    mkdir -p "./data/log"
+    touch "./data/log/app.log"
+    chmod 755 "./data/log/app.log"
     
 }
 
